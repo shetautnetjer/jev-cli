@@ -174,6 +174,8 @@ BGE and GLiNER are optional helpers. They do not silently remove legal semantic 
 - [Security](docs/SECURITY.md)
 - [Prior art](docs/PRIOR_ART.md)
 - [Benchmark methodology](docs/BENCHMARKING.md)
+- [Agent Bootstrap — copy/paste setup prompt](docs/AGENT_BOOTSTRAP.md)
+- [Research → CLI Cross-check](docs/RESEARCH_CROSSCHECK.md)
 - [Informed Decision Packet](cookbook/informed-decision-packet.md)
 - [Decision Basis + Next Operator](cookbook/decision-basis-routing.md)
 - [Question Design Checklist](cookbook/question-design-checklist.md)
