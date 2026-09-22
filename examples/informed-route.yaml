@@ -1,0 +1,28 @@
+id: example.informed-route
+version: "1"
+model: jev-latest
+questions:
+  route:
+    type: choice
+    instructions:
+      decision: Which represented operation directly satisfies state.request?
+      evidence: Use state.known_facts and state.request. Do not invent an unrepresented operation.
+    criteria:
+      repo_status:
+        covers: Inspect whether the repository is clean or dirty.
+        excludes: Does not return actual changed lines or diff hunks.
+      git_diff:
+        covers: Inspect actual changed lines and diff hunks.
+        excludes: Not merely a clean/dirty summary.
+      literal_search:
+        covers: Search exact text or regex-like occurrences in files.
+        excludes: Does not inspect Git diff hunks.
+      unknown_no_match:
+        covers: None of the represented operations directly satisfies the request.
+composition:
+  rules:
+    - question: route
+      operator: eq
+      value: unknown_no_match
+      result: ESCALATE_CAPABILITY_DISCOVERY
+  default: USE_SELECTED_ROUTE

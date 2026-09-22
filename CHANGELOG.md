@@ -12,3 +12,5 @@
 - Agent `SKILL.md` for Skills MCP ingestion.
 - Provider-neutral `ModelCallAdapter` for future Models MCP/core-model integration.
 - Docker, CI, security guidance, cookbook, and clean-room prior-art documentation.
+- Research-grounded Informed Decision Packet, decision-basis routing, function routing, SDE/presence, memory retrieval, and question-design cookbook chapters.
+- Uniquely named source-checkout install/run/publication verification helpers.

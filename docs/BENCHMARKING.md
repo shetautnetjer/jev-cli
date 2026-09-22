@@ -32,6 +32,8 @@ Cross-domain families can include:
 ## Regression themes
 
 Include:
+- state ablations: enough evidence vs missing the exact discriminator;
+- candidate-set ablations: complete set vs omitted true candidate;
 - explicit unknown/no-match;
 - Choice vs inappropriate competing Nouls;
 - precise vs vague discrimination criteria;

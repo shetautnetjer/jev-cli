@@ -20,6 +20,8 @@ state
 
 The **Decision Contract** is the reusable capability. Jev is one execution provider for it.
 
+A good Jev call is an **informed decision packet**: one precise decision, the evidence needed to discriminate it, a valid set of options, clear contrasts between those options, and an explicit no-match path when coverage is incomplete. See [Informed Decision Packet](cookbook/informed-decision-packet.md).
+
 ## Install
 
 Requires Python 3.11+.
@@ -41,6 +43,15 @@ Optional local specialists:
 python -m pip install -e '.[retrieval]'
 python -m pip install -e '.[extraction]'
 ```
+
+For a source checkout, the repository also provides uniquely named helpers:
+
+```bash
+python scripts/install_jev_decision_cli.py --editable --dev
+python scripts/run_jev_decision_cli.py doctor
+```
+
+The installed `jev` console command remains the normal user interface.
 
 ## Credentials
 
@@ -145,6 +156,8 @@ BGE and GLiNER are optional helpers. They do not silently remove legal semantic 
 
 ## Design rules
 
+- Prepare an informed decision packet before inference: decision, state, options, discriminators, and no-match path.
+- Separate workflow movement (`next_operator`) from the concrete reason/evidence class (`decision_basis`) when one question would otherwise carry both meanings.
 - Choice for one mutually exclusive finite decision.
 - Noul for one independently meaningful proposition.
 - Score for an ordered rubric with concrete level meanings.
@@ -161,6 +174,9 @@ BGE and GLiNER are optional helpers. They do not silently remove legal semantic 
 - [Security](docs/SECURITY.md)
 - [Prior art](docs/PRIOR_ART.md)
 - [Benchmark methodology](docs/BENCHMARKING.md)
+- [Informed Decision Packet](cookbook/informed-decision-packet.md)
+- [Decision Basis + Next Operator](cookbook/decision-basis-routing.md)
+- [Question Design Checklist](cookbook/question-design-checklist.md)
 
 ## Clean-room policy
 

@@ -1,0 +1,8 @@
+{
+  "request": "Show me the exact changed lines in the current worktree.",
+  "known_facts": {
+    "repository_exists": true,
+    "worktree_is_dirty": true,
+    "a_diff_has_not_yet_been_read": true
+  }
+}

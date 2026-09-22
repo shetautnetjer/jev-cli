@@ -1,0 +1,33 @@
+id: example.workflow-disposition
+version: "1"
+model: jev-latest
+questions:
+  next_operator:
+    type: choice
+    instructions:
+      decision: Which represented next operation directly follows from the current state?
+      constraint: Select unknown_no_match if the required movement is not represented.
+    criteria:
+      Observe: Acquire fresh external state.
+      Retrieve: Reopen retained or source evidence.
+      Act: Perform the represented effect.
+      Verify: Check whether a prior effect actually occurred.
+      Infer: Derive a bounded semantic conclusion from sufficient current evidence.
+      unknown_no_match: The required movement is not represented.
+  decision_basis:
+    type: choice
+    instructions: Which evidence condition determines the workflow disposition?
+    criteria:
+      state_ready: Current state contains what is needed for the represented semantic decision.
+      fresh_observation_needed: Current external state must be observed before deciding.
+      retained_lookup_needed: Retained or source evidence must be reopened.
+      effect_verification_needed: A claimed or attempted effect must be independently checked.
+      wait_for_running: A known operation is still running and should not be duplicated.
+      missing_candidate_or_contract: The required legal action, candidate, or contract is absent.
+      unresolved_distinction: Current evidence cannot discriminate the represented options.
+  prepared_effect_present:
+    type: noul
+    instructions: Does state explicitly show that an external side effect has already been prepared?
+    criteria:
+      "true": The state explicitly identifies a prepared external side effect.
+      "false": No prepared external side effect is explicitly present.

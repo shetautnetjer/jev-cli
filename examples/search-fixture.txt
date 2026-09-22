@@ -1,0 +1,3 @@
+Decision Contracts should keep deterministic facts outside model judgment.
+If the candidate set may be incomplete, include an explicit unknown or no-match answer.
+Retrieval recall and reranking are separate problems.

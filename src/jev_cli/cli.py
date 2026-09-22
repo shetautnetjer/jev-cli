@@ -330,11 +330,18 @@ def bench(
 def cookbook() -> None:
     """List bundled public cookbook recipes."""
     recipes = [
+        ("informed-decision-packet", "cookbook/informed-decision-packet.md"),
+        ("decision-basis-routing", "cookbook/decision-basis-routing.md"),
         ("choice-routing", "cookbook/choice-routing.md"),
+        ("function-routing", "cookbook/function-routing.md"),
         ("parallel-questions", "cookbook/parallel-questions.md"),
+        ("sde-presence-cascade", "cookbook/sde-presence-cascade.md"),
+        ("question-design-checklist", "cookbook/question-design-checklist.md"),
         ("search-recall", "cookbook/search-recall.md"),
+        ("memory-retrieval", "cookbook/memory-retrieval.md"),
         ("unknown-no-match", "cookbook/unknown-no-match.md"),
         ("compact-reasoner", "cookbook/compact-reasoner.md"),
+        ("anti-patterns", "cookbook/anti-patterns.md"),
     ]
     table = Table("Recipe", "Repository path")
     for name, path in recipes:

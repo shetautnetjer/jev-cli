@@ -4,6 +4,8 @@ This project treats Jev as a bounded semantic decision provider inside ordinary 
 
 ## Durable design principles
 
+- Prepare an **informed decision packet**: define the one decision, the state/evidence needed to discriminate it, the legal options, the distinctions between those options, and the no-match path.
+- When workflow movement and the reason for that movement are different meanings, separate them into `next_operator` Choice and `decision_basis` Choice rather than hiding both inside one vague question.
 - Use **Choice** for one mutually exclusive finite decision.
 - Use **Noul** for one independently meaningful yes/no proposition.
 - Use **Score** for an ordered rubric with concrete level meanings.

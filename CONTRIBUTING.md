@@ -26,4 +26,4 @@ If you change contract semantics, question validation, receipt fields, or search
 
 Never commit API keys, bearer tokens, cookies, private endpoints, private hostnames, or personal filesystem paths.
 
-Run `python scripts/publication_gate.py` before opening a release PR.
+Run `python scripts/verify_jev_cli_publication.py` before opening a release PR.

@@ -1,0 +1,12 @@
+{
+  "goal": "Publish the verified source tree.",
+  "observed_state": {
+    "local_tests_passed": true,
+    "remote_repository_exists": true,
+    "remote_source_tree_uploaded": true,
+    "hosted_ci_status": "unknown"
+  },
+  "known_constraints": {
+    "publication_is_not_complete_until_remote_ci_is_checked": true
+  }
+}
