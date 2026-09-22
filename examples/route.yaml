@@ -1,0 +1,26 @@
+id: example.route
+version: "1"
+model: jev-latest
+questions:
+  route:
+    type: choice
+    instructions: Which represented route matches the request?
+    criteria:
+      inspect: Read or inspect without changing state.
+      change: A represented change is requested.
+      unknown_no_match: None of the represented routes is a safe match.
+composition:
+  rules:
+    - question: route
+      operator: eq
+      value: inspect
+      result: READ_ONLY
+    - question: route
+      operator: eq
+      value: change
+      result: CHANGE
+    - question: route
+      operator: eq
+      value: unknown_no_match
+      result: ESCALATE
+  default: ESCALATE

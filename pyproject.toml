@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jev-cli"
+version = "0.1.0"
+description = "Decision contracts, search, and benchmarks for TypeSafe System One / Jev"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "jev-cli contributors"}]
+dependencies = [
+  "httpx>=0.28,<1",
+  "pathspec>=0.12,<1",
+  "pydantic>=2.10,<3",
+  "PyYAML>=6,<7",
+  "rich>=13.9,<15",
+  "typer>=0.16,<1"
+]
+
+[project.optional-dependencies]
+retrieval = ["sentence-transformers>=3.3,<6"]
+extraction = ["gliner>=0.2,<1"]
+dev = [
+  "mypy>=1.13,<2",
+  "pytest>=8,<9",
+  "ruff>=0.8,<1",
+  "types-PyYAML>=6,<7"
+]
+
+[project.scripts]
+jev = "jev_cli.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jev_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["jev_cli"]
