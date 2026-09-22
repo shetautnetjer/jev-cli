@@ -15,10 +15,10 @@ SECRET_PATTERNS = {
     "jwt-like": re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
 }
 
-# Project-specific private strings are assembled so the gate can scan itself.
+# Installation-private strings are assembled so the gate can scan itself.
+# Public project/owner identifiers are intentionally allowed.
 PRIVATE_LITERALS = [
     "/home/" + "aya-hmw",
-    "shetaut" + "netjer",
     "Heme-" + "Menat-Weret",
     "127.0.0.1:" + "8971",
     "127.0.0.1:" + "8972",

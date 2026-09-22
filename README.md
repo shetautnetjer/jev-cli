@@ -184,4 +184,6 @@ BGE and GLiNER are optional helpers. They do not silently remove legal semantic 
 
 ## License
 
-MIT.
+Licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 shetautnetjer.

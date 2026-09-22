@@ -8,8 +8,9 @@ version = "0.1.0"
 description = "Decision contracts, search, and benchmarks for TypeSafe System One / Jev"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
-authors = [{name = "jev-cli contributors"}]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "shetautnetjer"}]
 dependencies = [
   "httpx>=0.28,<1",
   "pathspec>=0.12,<1",
