@@ -23,7 +23,13 @@ Any future raw-state persistence must be explicit opt-in and clearly separated f
 
 ## Search
 
-Directory traversal follows explicit roots and configurable ignore rules. The CLI does not execute scanned files.
+Directory traversal follows explicit roots and configurable ignore rules. Directory scans reject file symlinks, require resolved candidates to remain inside the selected root, and reopen discovered files descriptor-relative with no-follow semantics for every path component.
+
+Symlinked `.gitignore` files are ignored rather than followed. Glob-expanded file symlinks are rejected.
+
+A caller may still explicitly select a literal symlink as a direct file input. That is treated as an intentional explicit path choice rather than implicit directory/glob traversal.
+
+The CLI does not execute scanned files.
 
 Semantic models are advisory. Their probabilities do not grant permission to act on files or external systems.
 
