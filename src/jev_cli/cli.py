@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from jev_cli import __version__
-from jev_cli.discovery import chunk_text, discover_files, read_text
+from jev_cli.discovery import chunk_text, discover_file_records, read_discovered_text
 from jev_cli.engine import execute
 from jev_cli.io import dump_json, load_contract, state_from_source
 from jev_cli.models import (
@@ -239,12 +239,19 @@ def search(
     gliner_label: Annotated[list[str] | None, typer.Option("--gliner-label")] = None,
 ) -> None:
     """Recall and rank text chunks; optionally ask Jev to judge an explicit candidate pool."""
-    files = discover_files(inputs, respect_gitignore=not no_gitignore)
+    files = discover_file_records(inputs, respect_gitignore=not no_gitignore)
     chunks = []
-    for path in files:
-        text = read_text(path)
+    for discovered in files:
+        text = read_discovered_text(discovered)
         if text is not None:
-            chunks.extend(chunk_text(path, text, lines=chunk_lines, overlap=overlap))
+            chunks.extend(
+                chunk_text(
+                    discovered.path,
+                    text,
+                    lines=chunk_lines,
+                    overlap=overlap,
+                )
+            )
 
     retriever: RetrievalAdapter
     if retriever_name == "lexical":

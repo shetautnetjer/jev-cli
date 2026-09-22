@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import glob
+import os
+import stat
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
 import pathspec
+
+SECURE_NOFOLLOW_AVAILABLE = (
+    hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY") and os.open in os.supports_dir_fd
+)
 
 COMMON_IGNORES = {
     ".git",
@@ -31,57 +37,252 @@ class TextChunk:
     text: str
 
 
-def _gitignore_spec(root: Path) -> pathspec.PathSpec | None:
-    ignore = root / ".gitignore"
-    if not ignore.is_file():
+@dataclass(frozen=True)
+class DiscoveredFile:
+    path: Path
+    root: Path | None = None
+    relative_path: Path | None = None
+
+    @property
+    def is_explicit(self) -> bool:
+        return self.root is None
+
+
+def _read_regular_bytes_no_follow(path: Path, *, max_bytes: int) -> bytes | None:
+    """Read one regular file without following a final-component symlink."""
+    if not hasattr(os, "O_NOFOLLOW"):
         return None
-    return pathspec.PathSpec.from_lines(
-        "gitwildmatch", ignore.read_text(encoding="utf-8").splitlines()
+    try:
+        if path.is_symlink():
+            return None
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        fd = os.open(path, flags)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_size > max_bytes:
+                return None
+            with os.fdopen(fd, "rb", closefd=False) as handle:
+                raw = handle.read(max_bytes + 1)
+            if len(raw) > max_bytes:
+                return None
+            return raw
+        finally:
+            os.close(fd)
+    except OSError:
+        return None
+
+
+def _open_absolute_directory_no_follow(path: Path) -> tuple[int, list[int]]:
+    """Reopen a previously canonicalized absolute directory path without following symlinks."""
+    if not SECURE_NOFOLLOW_AVAILABLE:
+        raise OSError("Secure no-follow directory traversal is unavailable on this platform")
+    if not path.is_absolute():
+        raise OSError("Directory path must be absolute")
+    canonical = path
+
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    opened: list[int] = []
+    try:
+        current_fd = os.open(canonical.anchor or os.sep, directory_flags)
+        opened.append(current_fd)
+        for part in canonical.parts[1:]:
+            next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+            opened.append(next_fd)
+            current_fd = next_fd
+        return current_fd, opened
+    except (OSError, NotImplementedError):
+        for fd in reversed(opened):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        raise
+
+
+def _read_relative_regular_bytes_no_follow(
+    root: Path,
+    relative_path: Path,
+    *,
+    max_bytes: int,
+) -> bytes | None:
+    """Read a file beneath root without following symlinks in any path component."""
+    if relative_path.is_absolute() or ".." in relative_path.parts or not relative_path.parts:
+        return None
+
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    file_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    opened: list[int] = []
+    try:
+        current_fd, opened = _open_absolute_directory_no_follow(root)
+        for part in relative_path.parts[:-1]:
+            next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+            opened.append(next_fd)
+            current_fd = next_fd
+
+        file_fd = os.open(relative_path.parts[-1], file_flags, dir_fd=current_fd)
+        opened.append(file_fd)
+        info = os.fstat(file_fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > max_bytes:
+            return None
+        with os.fdopen(file_fd, "rb", closefd=False) as handle:
+            raw = handle.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            return None
+        return raw
+    except (OSError, NotImplementedError):
+        return None
+    finally:
+        for fd in reversed(opened):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+
+def _gitignore_spec(root: Path) -> pathspec.PathSpec | None:
+    raw = _read_relative_regular_bytes_no_follow(
+        root,
+        Path(".gitignore"),
+        max_bytes=1_000_000,
     )
+    if raw is None:
+        return None
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
 
 
 def _allowed(path: Path, root: Path, spec: pathspec.PathSpec | None) -> bool:
     try:
         rel = path.relative_to(root)
     except ValueError:
-        return True
+        return False
     if any(part in COMMON_IGNORES for part in rel.parts):
         return False
     return spec is None or not spec.match_file(rel.as_posix())
 
 
-def discover_files(inputs: Iterable[str], *, respect_gitignore: bool = True) -> list[Path]:
-    found: set[Path] = set()
+def _glob_root(raw: str) -> Path:
+    pattern = Path(raw)
+    parts = pattern.parts
+    first_magic = next(
+        (index for index, part in enumerate(parts) if glob.has_magic(part)),
+        len(parts),
+    )
+    if first_magic == 0:
+        return Path.cwd().resolve()
+    root = Path(*parts[:first_magic])
+    if not root.is_absolute():
+        root = (Path.cwd() / root).resolve()
+    else:
+        root = root.resolve()
+    return root
+
+
+def discover_file_records(
+    inputs: Iterable[str],
+    *,
+    respect_gitignore: bool = True,
+) -> list[DiscoveredFile]:
+    found: dict[Path, DiscoveredFile] = {}
     for raw in inputs:
-        expanded = (
-            [Path(p) for p in glob.glob(raw, recursive=True)]
-            if glob.has_magic(raw)
-            else [Path(raw)]
+        has_magic = glob.has_magic(raw)
+        glob_root = _glob_root(raw) if has_magic else None
+        glob_spec = (
+            _gitignore_spec(glob_root)
+            if has_magic and respect_gitignore and glob_root is not None
+            else None
         )
+        expanded = [Path(p) for p in glob.glob(raw, recursive=True)] if has_magic else [Path(raw)]
         for item in expanded:
+            glob_lexical: Path | None = None
+            glob_resolved: Path | None = None
+            if has_magic:
+                if item.is_symlink() or glob_root is None:
+                    continue
+                glob_lexical = item if item.is_absolute() else (Path.cwd() / item)
+                glob_lexical = glob_lexical.absolute()
+                glob_resolved = item.resolve()
+                if not _allowed(glob_lexical, glob_root, glob_spec):
+                    continue
+                if not _allowed(glob_resolved, glob_root, glob_spec):
+                    continue
+
             if item.is_file():
-                found.add(item.resolve())
+                if has_magic:
+                    assert glob_root is not None
+                    assert glob_lexical is not None
+                    assert glob_resolved is not None
+                    relative_path = glob_lexical.relative_to(glob_root)
+                    found[glob_resolved] = DiscoveredFile(
+                        path=glob_resolved,
+                        root=glob_root,
+                        relative_path=relative_path,
+                    )
+                    continue
+                resolved = item.resolve()
+                found[resolved] = DiscoveredFile(path=resolved)
                 continue
+
             if not item.is_dir():
                 continue
-            root = item.resolve()
+            root = glob_resolved if has_magic else item.resolve()
+            assert root is not None
             spec = _gitignore_spec(root) if respect_gitignore else None
             for candidate in root.rglob("*"):
-                if candidate.is_file() and _allowed(candidate, root, spec):
-                    found.add(candidate.resolve())
-    return sorted(found)
+                # Directory scans never follow file symlinks. A caller may still
+                # explicitly select a literal symlink as a direct file input.
+                if candidate.is_symlink() or not candidate.is_file():
+                    continue
+                resolved = candidate.resolve()
+                if not _allowed(candidate, root, spec):
+                    continue
+                if not _allowed(resolved, root, spec):
+                    continue
+                relative_path = candidate.relative_to(root)
+                found[resolved] = DiscoveredFile(
+                    path=resolved,
+                    root=root,
+                    relative_path=relative_path,
+                )
+    return [found[path] for path in sorted(found)]
+
+
+def discover_files(inputs: Iterable[str], *, respect_gitignore: bool = True) -> list[Path]:
+    """Compatibility wrapper returning only resolved paths."""
+    return [
+        record.path for record in discover_file_records(inputs, respect_gitignore=respect_gitignore)
+    ]
+
+
+def _decode_text(raw: bytes | None) -> str | None:
+    if raw is None or b"\x00" in raw:
+        return None
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
 
 
 def read_text(path: Path, *, max_bytes: int = 2_000_000) -> str | None:
-    try:
-        if path.stat().st_size > max_bytes:
-            return None
-        raw = path.read_bytes()
-        if b"\x00" in raw:
-            return None
-        return raw.decode("utf-8")
-    except (OSError, UnicodeDecodeError):
-        return None
+    return _decode_text(_read_regular_bytes_no_follow(path, max_bytes=max_bytes))
+
+
+def read_discovered_text(
+    discovered: DiscoveredFile,
+    *,
+    max_bytes: int = 2_000_000,
+) -> str | None:
+    if discovered.root is not None and discovered.relative_path is not None:
+        raw = _read_relative_regular_bytes_no_follow(
+            discovered.root,
+            discovered.relative_path,
+            max_bytes=max_bytes,
+        )
+        return _decode_text(raw)
+    return read_text(discovered.path, max_bytes=max_bytes)
 
 
 def chunk_text(path: Path, text: str, *, lines: int = 80, overlap: int = 10) -> list[TextChunk]:
