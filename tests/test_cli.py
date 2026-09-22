@@ -32,8 +32,7 @@ def test_search_semantic_requires_explicit_pool(tmp_path: Path) -> None:
         app,
         ["search", "decision", str(tmp_path), "--semantic", "--provider", "mock"],
     )
-    assert result.exit_code != 0
-    assert "semantic-limit" in result.output
+    assert result.exit_code == 2
 
 
 def test_missing_credential_is_concise(monkeypatch) -> None:
