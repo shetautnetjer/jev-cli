@@ -123,6 +123,7 @@ The explicit limit makes recall/cost pruning visible instead of hiding a univers
 | `jev bench` | run frozen benchmark cases |
 | `jev cookbook` | list bundled recipes |
 | `jev doctor` | inspect provider/extras configuration without exposing secrets |
+| `jev catalog` | import/list/show versioned contracts and record/query observed outcomes in local SQLite |
 
 Graph execution and an MCP/HTTP server are intentionally deferred from V0.
 

@@ -356,5 +356,97 @@ def cookbook() -> None:
     console.print(table)
 
 
+catalog_app = typer.Typer(help="Local SQLite question contracts and observed outcomes.")
+app.add_typer(catalog_app, name="catalog")
+
+
+@catalog_app.command("import")
+def catalog_import(
+    contract_file: Path,
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+    scope: Annotated[str, typer.Option("--scope")] = "general",
+) -> None:
+    """Import an existing versioned Decision Contract without calling a provider."""
+    from jev_cli.catalog import connect, import_contract
+
+    with connect(db) as store:
+        try:
+            digest = import_contract(
+                store, load_contract(contract_file), scope=scope, source_ref=str(contract_file)
+            )
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from None
+    typer.echo(digest)
+
+
+@catalog_app.command("list")
+def catalog_list(
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+) -> None:
+    """List stored contract identities, versions, and fingerprints."""
+    from jev_cli.catalog import connect, list_contracts
+
+    with connect(db) as store:
+        typer.echo(dump_json(list_contracts(store)))
+
+
+@catalog_app.command("show")
+def catalog_show(
+    contract_id: str,
+    version: str,
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+) -> None:
+    """Show the imported contract, including its question and answer space."""
+    from jev_cli.catalog import connect, get_contract
+
+    with connect(db) as store:
+        try:
+            contract = get_contract(store, contract_id, version)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from None
+        typer.echo(dump_json(contract))
+
+
+@catalog_app.command("record")
+def catalog_record(
+    receipt_file: Path,
+    run_id: Annotated[str, typer.Option("--run-id")],
+    step_id: Annotated[str, typer.Option("--step-id")],
+    observed_result: Annotated[str, typer.Option("--result")],
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+    effect_receipt_ref: Annotated[str | None, typer.Option("--effect-ref")] = None,
+) -> None:
+    """Record a Jev answer with a separately observed outcome; no effects are executed."""
+    from jev_cli.catalog import connect, record_outcome
+
+    receipt = DecisionReceipt.model_validate_json(receipt_file.read_text(encoding="utf-8"))
+    with connect(db) as store:
+        try:
+            record_outcome(
+                store,
+                receipt,
+                run_id=run_id,
+                step_id=step_id,
+                observed_result=observed_result,
+                provider_receipt_ref=str(receipt_file),
+                effect_receipt_ref=effect_receipt_ref,
+            )
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from None
+    typer.echo("recorded")
+
+
+@catalog_app.command("outcomes")
+def catalog_outcomes(
+    run_id: str,
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+) -> None:
+    """Read exact stored answers and outcomes for one run."""
+    from jev_cli.catalog import connect, list_outcomes
+
+    with connect(db) as store:
+        typer.echo(dump_json(list_outcomes(store, run_id)))
+
+
 if __name__ == "__main__":
     app()

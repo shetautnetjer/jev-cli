@@ -1,6 +1,6 @@
 # Jev question catalog and situated workflow loop
 
-Status: design candidate, 2026-09-23. This document defines the next implementation slice; it does not claim the graph runner or SQL catalog is deployed.
+Status: local catalog slice implemented 2026-09-23; graph runner, GraphQL view, AYA MCP adapter and browser/CUA integration remain design candidates.
 
 ## Ownership and integration
 
@@ -72,7 +72,7 @@ CREATE TABLE outcomes (
 
 Do not put keys or raw private UI contents in the catalog. Keep runtime task/turn/trace/observation/effect IDs in AYA's existing event and source tables, with references in outcomes, rather than cloning them. A contract change gets a new fingerprint/version. `observed_result` must distinguish success, failure, unresolved and superseded; the Jev answer is not the outcome.
 
-The public CLI should add `catalog import/list/show`, `contract lint`, and `outcome record/query` only after existing contract schemas are reconciled. GraphQL, if needed, is a read/query facade over the same SQL definitions and outcomes; it is not a second store or workflow engine. An initial SQL view or CLI query may be enough.
+The CLI now provides `catalog import/list/show/record/outcomes` against its existing DecisionContract and DecisionReceipt types. Import stores the full contract, its fingerprint and each question; changed content must use a new version. Record accepts an external observed status and receipt references. That status is supplied by the caller, not independently verified by the catalog. SQL transitions remain a reserved table with no graph executor. Contract lint and an AYA MCP adapter still need qualification. GraphQL, if needed, is a read/query facade over the same SQL definitions and outcomes; it is not a second store or workflow engine. An initial SQL view or CLI query may be enough.
 
 ## Prior art to evaluate, not blindly install
 
@@ -91,3 +91,17 @@ The public CLI should add `catalog import/list/show`, `contract lint`, and `outc
 5. Keep the stronger Aya model available to create or revise a contract when the action space is incomplete; freeze and evaluate the revised contract before routine use.
 
 Existing evidence: AYA semantic-workflow Phase 1 found exact lifecycle decisions belong to deterministic checks; later question-design V3 improved bounded semantic decisions but did not solve candidate coverage. Those results are development evidence, not proof of end-to-end browser/CUA speedups.
+
+## CLI catalog example
+
+```sh
+jev init route.yaml
+jev catalog import route.yaml --db ./questions.sqlite
+jev catalog list --db ./questions.sqlite
+jev catalog show example.route 1 --db ./questions.sqlite
+jev run route.yaml --state "Show the current page" > receipt.json
+jev catalog record receipt.json --run-id run-1 --step-id step-1 --result unresolved --db ./questions.sqlite
+jev catalog outcomes run-1 --db ./questions.sqlite
+```
+
+The example `run` call requires a configured TypeSafe credential; `catalog import/list/show` and recording an existing receipt do not. Do not pass secrets or raw sensitive task state to the catalog.
