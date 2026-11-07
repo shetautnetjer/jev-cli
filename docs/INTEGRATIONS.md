@@ -121,6 +121,25 @@ fallback. Primary/fallback policy stays on the MCP server; the CLI adds no paid
 fallback or retry policy. The server may impose stricter question/description
 limits than the direct provider.
 
+Every receipt requires an enabled primary or fallback route in the negotiated
+capabilities. Missing/null route metadata, a disabled route or a different
+provider/requested model is refused. Legacy capability responses without provider
+details are not qualified by this adapter. Primary resolution must equal its
+requested model. For fallback, a resolved model may be the configured alias or
+its versioned `alias-...` form, matching the service's existing model
+identity contract. Both strings are retained unchanged: for example, requested
+`typesafe/jev-1.13` and resolved `typesafe/jev-1.13-20260917`. Similar prefixes such
+as `typesafe/jev-1.130-...` are refused. This check binds a returned receipt to the
+negotiated route; it does not independently verify which remote model ran.
+
+Offline adapter tests use synthetic MCP stdio children and require local process
+IPC. An execution sandbox that denies Python's asyncio self-pipe writes can cause
+initialization timeouts even when no external network is used. Treat that as an
+environmental failure, preserve its evidence, and run the same bounded fixtures
+with authorized local IPC. Do not replace receipt assertions with timeout-based
+success. Install the `dev` and `mcp` extras together to exercise these tests; CI
+does so explicitly.
+
 After the caller executes and verifies an action, attach the observation:
 
 ```sh

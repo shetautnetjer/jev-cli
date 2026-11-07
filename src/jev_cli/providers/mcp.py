@@ -53,6 +53,18 @@ def normalize(
         resolved = _safe_label(body["resolved_model"])
         if not requested or not resolved or type(body["fallback_used"]) is not bool:
             raise ValueError
+        providers = (capabilities or {}).get("providers")
+        if not isinstance(providers, dict):
+            raise ValueError
+        route = providers.get("fallback" if body["fallback_used"] else "primary")
+        if (
+            not isinstance(route, dict)
+            or route.get("enabled") is not True
+            or not _safe_label(route.get("id"))
+            or body.get("provider") != route.get("id")
+            or requested != route.get("model")
+        ):
+            raise ValueError
         if not body["fallback_used"]:
             primary_model = (capabilities or {}).get("model", contract.model)
             if primary_model != "jev-latest" and requested != primary_model:
@@ -62,16 +74,9 @@ def normalize(
             if requested != resolved:
                 raise ValueError
         else:
-            fallback = (capabilities or {}).get("providers", {}).get("fallback")
-            # Older compatible servers did not advertise provider details. When
-            # available, bind the returned fallback to the negotiated route.
-            if fallback is not None and (
-                not isinstance(fallback, dict)
-                or fallback.get("enabled") is not True
-                or body.get("provider") != fallback.get("id")
-                or requested != fallback.get("model")
-                or resolved != fallback.get("model")
-            ):
+            # The service permits a versioned OpenRouter resolution of its
+            # configured alias. Keep both identities intact in the receipt.
+            if not (resolved == requested or resolved.startswith(requested + "-")):
                 raise ValueError
         usage = normalize_usage(body.get("usage"))
         elapsed = body.get("elapsed_ms")

@@ -411,6 +411,7 @@ def catalog_run(
         _close(provider)
     typer.echo(dump_json(receipt))
 
+
 @catalog_app.command("decisions")
 def catalog_decisions(
     run_id: str,
@@ -423,6 +424,7 @@ def catalog_decisions(
 
     with closing(connect(db)) as store:
         typer.echo(dump_json(list_decisions(store, run_id)))
+
 
 @catalog_app.command("observe")
 def catalog_observe(
@@ -449,6 +451,7 @@ def catalog_observe(
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from None
     typer.echo("recorded")
+
 
 @catalog_app.command("find")
 def catalog_find(
