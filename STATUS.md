@@ -64,3 +64,25 @@ separate pyright adapter still has the dependency-resolution limitation describe
 above (22 errors); this does not replace the qualified environment's mypy result.
 SUPERAGENT will retain the compact qualification packet and handle remote review,
 publication and merge. No runtime adoption or live provider result is claimed.
+
+## 2026-11-07 — Serialize catalog admission before publication
+
+A review of the complete proposed delta found a two-writer race in the imported
+catalog: outcome admission and run reservation read their guards before SQLite
+started a write transaction. An isolated two-connection probe at `eb129d8`
+stored a completed decision and a conflicting outcome under the same run/step
+with different state digests. The failed witness remains separate evidence.
+
+Both paths now acquire `BEGIN IMMEDIATE` before their admission reads and commit
+their corresponding batch/reservation atomically. The reservation commits before
+provider work. Two real-connection interleaving controls failed before the fix
+and pass afterward; a late duplicate-question control confirms the complete
+outcome batch rolls back while preserving prior committed rows. No SQL schema,
+store, provider policy or background process changed.
+
+The full offline suite passes 70 tests in the locked pytest 9.0.3 environment.
+Ruff and mypy checks passed for the change; independent source review found no
+remaining material issue in these transaction boundaries. Earlier 67-test
+qualification remains frozen. The added probe and red/green evidence are under
+`/tmp/jev-catalog-review-20261107/` and the `catalog-*` runs in
+`/tmp/jev-mcp-repair-20261107/` for a separate SUPERAGENT follow-up packet.

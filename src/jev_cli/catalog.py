@@ -169,23 +169,27 @@ def record_outcome(
 ) -> None:
     if observed_result not in {"success", "failure", "unresolved", "superseded"}:
         raise ValueError("Invalid observed result")
-    row = db.execute(
-        "SELECT fingerprint FROM contracts WHERE contract_id=? AND version=?",
-        (receipt.contract_id, receipt.contract_version),
-    ).fetchone()
-    if row is None or row["fingerprint"] != receipt.contract_sha256:
-        raise ValueError("Receipt does not match an imported contract fingerprint")
-    decision = db.execute(
-        "SELECT status,receipt_json FROM decisions WHERE run_id=? AND step_id=?", (run_id, step_id)
-    ).fetchone()
-    if decision is not None:
-        if decision["status"] != "completed" or (
-            DecisionReceipt.model_validate_json(decision["receipt_json"]) != receipt
-        ):
-            raise ValueError(
-                "Outcome receipt does not match the retained decision for this run/step"
-            )
     with db:
+        # Reserve the writer before admission reads; a competing run must not
+        # appear between the decision check and this outcome batch's insertion.
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT fingerprint FROM contracts WHERE contract_id=? AND version=?",
+            (receipt.contract_id, receipt.contract_version),
+        ).fetchone()
+        if row is None or row["fingerprint"] != receipt.contract_sha256:
+            raise ValueError("Receipt does not match an imported contract fingerprint")
+        decision = db.execute(
+            "SELECT status,receipt_json FROM decisions WHERE run_id=? AND step_id=?",
+            (run_id, step_id),
+        ).fetchone()
+        if decision is not None:
+            if decision["status"] != "completed" or (
+                DecisionReceipt.model_validate_json(decision["receipt_json"]) != receipt
+            ):
+                raise ValueError(
+                    "Outcome receipt does not match the retained decision for this run/step"
+                )
         for qid, answer in receipt.answers.items():
             db.execute(
                 "INSERT INTO outcomes (run_id,step_id,contract_id,version,question_id,"
@@ -231,6 +235,9 @@ def run_contract(
     contract = get_contract(db, contract_id, version)
     try:
         with db:
+            # The outcomes guard and reservation share one write transaction.
+            # Commit it before executing the provider below.
+            db.execute("BEGIN IMMEDIATE")
             if db.execute(
                 "SELECT 1 FROM outcomes WHERE run_id=? AND step_id=?", (run_id, step_id)
             ).fetchone():
