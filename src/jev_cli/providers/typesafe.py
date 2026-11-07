@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import httpx
 
 from jev_cli.models import (
     DecisionContract,
-    NormalizedAnswer,
     ProviderResult,
-    ProviderUsage,
     StatePacket,
 )
+from jev_cli.providers.validation import normalize_answers, normalize_usage
 from jev_cli.secrets import resolve_typesafe_api_key
 
 
@@ -61,30 +59,20 @@ class TypeSafeProvider:
         except httpx.RequestError:
             raise RuntimeError("TypeSafe request failed due to a transport error.") from None
         elapsed_ms = (time.perf_counter() - started) * 1000
-        body: dict[str, Any] = response.json()
-        answers: dict[str, NormalizedAnswer] = {}
-        for qid, raw in body.get("answers", {}).items():
-            qtype = raw.get("type")
-            if qtype == "choice":
-                value = raw["choice"]
-            elif qtype == "noul":
-                value = float(raw["noul"])
-            elif qtype == "score":
-                value = float(raw["score"])
-            else:
-                raise ValueError(f"Unsupported answer type for {qid}: {qtype!r}")
-            answers[qid] = NormalizedAnswer(
-                id=qid,
-                type=qtype,
-                value=value,
-                probabilities=raw.get("probabilities"),
-                confidence=raw.get("confidence"),
-            )
-        usage_raw = body.get("usage")
-        usage = ProviderUsage.model_validate(usage_raw) if isinstance(usage_raw, dict) else None
+        try:
+            body = response.json()
+            resolved = body["model"]
+            if not isinstance(resolved, str) or not resolved or len(resolved) > 128:
+                raise ValueError
+            if contract.model != "jev-latest" and resolved != contract.model:
+                raise ValueError
+            answers = normalize_answers(body["answers"], contract)
+            usage = normalize_usage(body.get("usage"))
+        except (KeyError, TypeError, ValueError, AttributeError, RuntimeError):
+            raise RuntimeError("TypeSafe returned an invalid Jev response") from None
         return ProviderResult(
             requested_model=contract.model,
-            resolved_model=body.get("model"),
+            resolved_model=resolved,
             answers=answers,
             usage=usage,
             elapsed_ms=elapsed_ms,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -42,12 +43,22 @@ console = Console()
 err_console = Console(stderr=True)
 
 
-def _provider(name: str) -> ProviderAdapter:
+def _provider(name: str, mcp_config: Path | None = None) -> ProviderAdapter:
     if name == "typesafe":
         return TypeSafeProvider()
     if name == "mock":
         return MockProvider()
-    raise typer.BadParameter("provider must be 'typesafe' or 'mock'")
+    if name == "mcp":
+        from jev_cli.providers.mcp import MCPProvider
+
+        configured = mcp_config or os.environ.get("JEV_MCP_CONFIG")
+        if not configured:
+            raise typer.BadParameter("MCP requires --mcp-config or JEV_MCP_CONFIG")
+        try:
+            return MCPProvider.from_file(Path(configured))
+        except RuntimeError as exc:
+            raise typer.BadParameter(str(exc)) from None
+    raise typer.BadParameter("provider must be 'typesafe', 'mcp', or 'mock'")
 
 
 def _close(provider: ProviderAdapter) -> None:
@@ -358,6 +369,103 @@ def cookbook() -> None:
 
 catalog_app = typer.Typer(help="Local SQLite question contracts and observed outcomes.")
 app.add_typer(catalog_app, name="catalog")
+
+
+@catalog_app.command("run")
+def catalog_run(
+    contract_id: str,
+    version: str,
+    run_id: Annotated[str, typer.Option("--run-id")],
+    step_id: Annotated[str, typer.Option("--step-id")],
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+    state: Annotated[str | None, typer.Option("--state")] = None,
+    state_file: Annotated[Path | None, typer.Option("--state-file")] = None,
+    reference: Annotated[str | None, typer.Option("--reference")] = None,
+    provider_name: Annotated[str, typer.Option("--provider")] = "typesafe",
+    mcp_config: Annotated[Path | None, typer.Option("--mcp-config")] = None,
+) -> None:
+    """Run an imported contract and retain its decision; no effect or success is assumed."""
+    from contextlib import closing
+
+    from jev_cli.catalog import connect, run_contract
+
+    if mcp_config and provider_name != "mcp":
+        raise typer.BadParameter("--mcp-config requires --provider mcp")
+    provider = _provider(provider_name, mcp_config)
+    try:
+        packet = state_from_source(state_text=state, state_file=state_file, reference=reference)
+        with closing(connect(db)) as store:
+            receipt = run_contract(
+                store,
+                contract_id,
+                version,
+                packet,
+                provider,
+                run_id=run_id,
+                step_id=step_id,
+            )
+    except (ValueError, RuntimeError) as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(1) from None
+    finally:
+        _close(provider)
+    typer.echo(dump_json(receipt))
+
+@catalog_app.command("decisions")
+def catalog_decisions(
+    run_id: str,
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+) -> None:
+    """Read retained decisions, including pending/failed attempts, without calling Jev."""
+    from contextlib import closing
+
+    from jev_cli.catalog import connect, list_decisions
+
+    with closing(connect(db)) as store:
+        typer.echo(dump_json(list_decisions(store, run_id)))
+
+@catalog_app.command("observe")
+def catalog_observe(
+    run_id: str,
+    step_id: str,
+    observed_result: Annotated[str, typer.Option("--result")],
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+    effect_receipt_ref: Annotated[str | None, typer.Option("--effect-ref")] = None,
+) -> None:
+    """Attach one caller-observed outcome to a completed decision; does not verify the claim."""
+    from contextlib import closing
+
+    from jev_cli.catalog import connect, observe_decision
+
+    with closing(connect(db)) as store:
+        try:
+            observe_decision(
+                store,
+                run_id,
+                step_id,
+                observed_result=observed_result,
+                effect_receipt_ref=effect_receipt_ref,
+            )
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from None
+    typer.echo("recorded")
+
+@catalog_app.command("find")
+def catalog_find(
+    text: str,
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+    scope: Annotated[str | None, typer.Option("--scope")] = None,
+) -> None:
+    """Find contracts by literal text in IDs, questions, options or tags; no top-k cutoff."""
+    from contextlib import closing
+
+    from jev_cli.catalog import connect, find_contracts
+
+    with closing(connect(db)) as store:
+        try:
+            typer.echo(dump_json(find_contracts(store, text, scope=scope)))
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from None
 
 
 @catalog_app.command("import")
