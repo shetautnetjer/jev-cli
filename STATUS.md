@@ -40,3 +40,27 @@ dependency environment's mypy check above passed. No trust override was granted.
 No live model calls, service changes, installed defaults or publication are part
 of this qualification. Upstream synchronization and checks against the merged
 dependency requirements remain the next step before publication.
+
+## 2026-11-07 — Synchronize current upstream before publication
+
+The repaired source is recorded separately in `3ab93d5`. The subsequent merge
+includes `origin/main` at `a65826a`, including its pytest 9.0.3 update. Conflicts
+in search discovery, its tests and security documentation retain the existing
+local `97d4548` behavior: ancestor/glob no-follow checks, FIFO handling and the
+associated controls. No MCP changes were mixed into those search resolutions.
+The merged lock retains the MCP extra; pytest is its sole package-version change.
+
+An isolated worktree `.venv` was created from the frozen lock. The offline attempt
+correctly refused the uncached pytest wheel; the subsequent locked dependency
+fetch populated only that test environment. The original environment and dirty
+source remained unchanged. With Python 3.13.15 / pytest 9.0.3 / MCP 1.30.0 /
+AnyIO 4.15.1, all 67 tests passed again, along with Ruff lint/format and mypy over
+22 source files. The prior pre-merge and restricted failures remain separate
+evidence; they were not overwritten by these successful runs.
+
+Swan clean-rebuilt the exact worktree after the dependency change: 35 Python
+files, 825 symbols and zero stale/new files. Known-symbol lookup passed. Its
+separate pyright adapter still has the dependency-resolution limitation described
+above (22 errors); this does not replace the qualified environment's mypy result.
+SUPERAGENT will retain the compact qualification packet and handle remote review,
+publication and merge. No runtime adoption or live provider result is claimed.
