@@ -74,5 +74,6 @@ def execute(
         answers=result.answers,
         usage=result.usage,
         provider_elapsed_ms=result.elapsed_ms,
+        provider_metadata=result.metadata,
         composition=compose(contract, result.answers),
     )

@@ -1,5 +1,9 @@
+import os
 from pathlib import Path
 
+import pytest
+
+import jev_cli.discovery as discovery
 from jev_cli.discovery import (
     chunk_text,
     discover_file_records,
@@ -109,6 +113,115 @@ def test_glob_discovery_rejects_file_symlink(tmp_path: Path) -> None:
     (root / "alias.txt").symlink_to(outside)
 
     assert discover_file_records([str(root / "*.txt")]) == []
+
+
+def test_glob_discovery_rejects_symlinked_directory_match(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("private material", encoding="utf-8")
+    (root / "alias").symlink_to(outside, target_is_directory=True)
+
+    assert discover_file_records([str(root / "*")]) == []
+
+
+def test_glob_read_rejects_parent_directory_swap(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    nested = root / "nested"
+    nested.mkdir(parents=True)
+    candidate = nested / "candidate.txt"
+    candidate.write_text("safe", encoding="utf-8")
+
+    records = discover_file_records([str(root / "**" / "*.txt")])
+    assert len(records) == 1
+    assert records[0].root == root.resolve()
+
+    moved = root / "nested-original"
+    nested.rename(moved)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "candidate.txt").write_text("private material", encoding="utf-8")
+    nested.symlink_to(outside, target_is_directory=True)
+
+    assert read_discovered_text(records[0]) is None
+
+
+def test_directory_read_rejects_selected_root_ancestor_swap(tmp_path: Path) -> None:
+    holder = tmp_path / "holder"
+    root = holder / "repo"
+    root.mkdir(parents=True)
+    candidate = root / "candidate.txt"
+    candidate.write_text("safe", encoding="utf-8")
+
+    records = discover_file_records([str(root)])
+    assert len(records) == 1
+
+    original_holder = tmp_path / "holder-original"
+    holder.rename(original_holder)
+    outside_holder = tmp_path / "outside-holder"
+    outside_root = outside_holder / "repo"
+    outside_root.mkdir(parents=True)
+    (outside_root / "candidate.txt").write_text("private material", encoding="utf-8")
+    holder.symlink_to(outside_holder, target_is_directory=True)
+
+    assert read_discovered_text(records[0]) is None
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="mkfifo unavailable")
+def test_fifo_gitignore_fails_closed_without_blocking(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    visible = root / "visible.txt"
+    visible.write_text("visible", encoding="utf-8")
+    os.mkfifo(root / ".gitignore")
+
+    assert discover_files([str(root)]) == [visible.resolve()]
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="mkfifo unavailable")
+def test_direct_fifo_text_read_is_rejected(tmp_path: Path) -> None:
+    fifo = tmp_path / "pipe.txt"
+    os.mkfifo(fifo)
+
+    assert read_text(fifo) is None
+
+
+def test_absolute_root_open_closes_descriptors_on_intermediate_failure(monkeypatch) -> None:
+    opened = 41
+    calls = 0
+    closed: list[int] = []
+
+    def fake_open(path, flags, mode=0o777, *, dir_fd=None):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return opened
+        raise OSError("synthetic ancestor failure")
+
+    monkeypatch.setattr(discovery, "SECURE_NOFOLLOW_AVAILABLE", True)
+    monkeypatch.setattr(discovery.os, "open", fake_open)
+    monkeypatch.setattr(discovery.os, "close", closed.append)
+
+    with pytest.raises(OSError):
+        discovery._open_absolute_directory_no_follow(Path("/a/b"))
+
+    assert closed == [opened]
+
+
+def test_protected_discovery_read_fails_closed_without_secure_primitives(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    candidate = root / "candidate.txt"
+    candidate.write_text("safe", encoding="utf-8")
+    records = discover_file_records([str(root)])
+    assert len(records) == 1
+
+    monkeypatch.setattr(discovery, "SECURE_NOFOLLOW_AVAILABLE", False)
+
+    assert read_discovered_text(records[0]) is None
 
 
 def test_lexical_search_ranks_matching_chunk_first(tmp_path: Path) -> None:
