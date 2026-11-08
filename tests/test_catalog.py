@@ -341,3 +341,99 @@ def test_catalog_cli_import_and_show(tmp_path: Path) -> None:
     shown = runner.invoke(app, ["catalog", "show", "example.route", "1", "--db", str(db_path)])
     assert shown.exit_code == 0, shown.output
     assert "unknown_no_match" in shown.output
+
+
+@pytest.mark.parametrize("kind", ["missing", "directory"])
+def test_catalog_import_rejects_non_file_inputs(tmp_path: Path, kind: str) -> None:
+    path = tmp_path / "contract.yaml"
+    if kind == "directory":
+        path.mkdir()
+    db_path = tmp_path / "catalog.sqlite"
+    result = CliRunner().invoke(app, ["catalog", "import", str(path), "--db", str(db_path)])
+
+    _assert_clean_cli_error(result)
+    assert "file" in result.output.lower()
+    assert not db_path.exists()
+
+
+@pytest.mark.parametrize("error_type", [PermissionError, FileNotFoundError])
+def test_catalog_import_handles_post_validation_read_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error_type: type[OSError]
+) -> None:
+    path = tmp_path / "contract.json"
+    path.write_text(json.dumps(_LITERAL_CONTRACT), encoding="utf-8")
+    db_path = tmp_path / "catalog.sqlite"
+    original = Path.read_text
+
+    def failed_read(self: Path, *args, **kwargs):
+        if self == path:
+            raise error_type(SECRET)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", failed_read)
+    result = CliRunner().invoke(app, ["catalog", "import", str(path), "--db", str(db_path)])
+
+    _assert_clean_cli_error(result, absent=SECRET)
+    assert "Contract file cannot be read" in result.output
+    assert not db_path.exists()
+
+
+@pytest.mark.parametrize(
+    ("suffix", "content"),
+    [
+        (".yaml", f"questions: [{SECRET}\n".encode()),
+        (".json", f'{{"id": "{SECRET}",'.encode()),
+        (".yaml", b"\xff\xfe" + SECRET.encode()),
+        (".yaml", b""),
+        (".json", json.dumps([SECRET]).encode()),
+        (".json", json.dumps({"id": SECRET}).encode()),
+        pytest.param(".json", b"[" * 1500 + b"0" + b"]" * 1500, id="deep-json"),
+        pytest.param(".yaml", b"[" * 1500 + b"0" + b"]" * 1500, id="deep-yaml"),
+    ],
+)
+def test_catalog_import_handles_invalid_contract_file_without_content_leak(
+    tmp_path: Path, suffix: str, content: bytes
+) -> None:
+    path = tmp_path / f"contract{suffix}"
+    path.write_bytes(content)
+    db_path = tmp_path / "catalog.sqlite"
+    result = CliRunner().invoke(app, ["catalog", "import", str(path), "--db", str(db_path)])
+
+    _assert_clean_cli_error(result, absent=SECRET)
+    assert "not a valid decision contract" in result.output
+    assert not db_path.exists()
+
+
+def test_catalog_import_keeps_version_mismatch_and_closes_connections(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sqlite3
+
+    import jev_cli.catalog as catalog_module
+
+    path = tmp_path / "contract.json"
+    path.write_text(json.dumps(_LITERAL_CONTRACT), encoding="utf-8")
+    db_path = tmp_path / "catalog.sqlite"
+    opened = []
+    original = catalog_module.connect
+
+    def tracking_connect(path: Path):
+        db = original(path)
+        opened.append(db)
+        return db
+
+    monkeypatch.setattr(catalog_module, "connect", tracking_connect)
+    runner = CliRunner()
+    args = ["catalog", "import", str(path), "--db", str(db_path)]
+    imported = runner.invoke(app, args)
+    assert imported.exit_code == 0, imported.output
+    path.write_text(json.dumps({**_LITERAL_CONTRACT, "model": "other-model"}), encoding="utf-8")
+    mismatch = runner.invoke(app, args)
+    _assert_clean_cli_error(mismatch)
+    assert "increment its version" in mismatch.output
+    assert len(opened) == 2
+    for db in opened:
+        with pytest.raises(sqlite3.ProgrammingError):
+            db.execute("SELECT 1")
+    with connect(db_path) as db:
+        assert get_contract(db, "literal.find", "1").model == "jev-latest"

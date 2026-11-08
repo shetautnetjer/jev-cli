@@ -197,3 +197,23 @@ with `_import_transaction` resolving to the current source. No schema, provider
 policy, permission default, service or live catalog changed. Original Sonnet
 qualification remains frozen; coordinating review and publication are recorded
 by SUPERAGENT.
+
+## 2026-11-07 — Validate catalog import files before opening the store
+
+PR #3's review at `c8a8412` identified uncaught missing/unreadable import files.
+The import argument now requires an existing readable file, and its separate
+load boundary handles post-validation disappearance/read refusal. Invalid
+UTF-8, JSON, YAML, mapping/schema input and parser-depth errors produce fixed
+diagnostics without quoting contract contents. A bounded nested-YAML fixture
+reproduced the additional raw RecursionError before that final guard was added.
+No catalog is opened or created until the contract successfully loads. Existing
+backend version-mismatch errors remain actionable, and success/mismatch still
+close their acquired connections. Other CLI commands and parsers are unchanged.
+
+All 127 offline tests pass with native local IPC, including 13 new import-input
+controls. Ruff lint/format, mypy over 22 source files and diff checks pass.
+Separate red/green evidence and final source hashes are retained at
+`/tmp/jev-pr3-file-input-20261107/`; earlier packets remain frozen. The exact
+publication Swan map is refreshed and resolves `catalog_import` at the current
+source. No live provider, service, default setting or existing catalog changed.
+Coordinating review and publication are recorded by SUPERAGENT.

@@ -496,7 +496,7 @@ def catalog_find(
 
 @catalog_app.command("import")
 def catalog_import(
-    contract_file: Path,
+    contract_file: Annotated[Path, typer.Argument(exists=True, readable=True, dir_okay=False)],
     db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
     scope: Annotated[str, typer.Option("--scope")] = "general",
 ) -> None:
@@ -506,11 +506,19 @@ def catalog_import(
 
     from jev_cli.catalog import connect, import_contract
 
+    # Validate input before creating/opening a catalog. Files can disappear or
+    # become unreadable after Typer's initial path validation.
+    try:
+        contract = load_contract(contract_file)
+    except OSError:
+        raise typer.BadParameter("Contract file cannot be read") from None
+    except (ValueError, yaml.YAMLError, RecursionError):
+        # Parser and schema errors can quote private contract contents.
+        raise typer.BadParameter("Contract file is not a valid decision contract") from None
+
     try:
         with closing(connect(db)) as store:
-            digest = import_contract(
-                store, load_contract(contract_file), scope=scope, source_ref=str(contract_file)
-            )
+            digest = import_contract(store, contract, scope=scope, source_ref=str(contract_file))
     except sqlite3.Error:
         raise typer.BadParameter(
             "Catalog database operation failed; inspect the contract before retrying"
