@@ -53,6 +53,10 @@ python scripts/run_jev_decision_cli.py doctor
 
 The installed `jev` console command remains the normal user interface.
 
+Optional [Skills-rs](rust/skills-rs/README.md) projects the qualified typed method
+and replays retained decision receipts in Rust. It works alongside the existing
+Skills MCP catalog; it is not another server or a general workflow compiler.
+
 ## Credentials
 
 Never put API keys in command arguments.
@@ -109,7 +113,13 @@ jev search "decision contract unknown option" . \
   --semantic --semantic-limit 30
 ```
 
-The explicit limit makes recall/cost pruning visible instead of hiding a universal top-k.
+The explicit limit makes recall/cost pruning visible instead of hiding a universal top-k; it is **not** a whole-run billing cap. For a local, opt-in path-name lead before reading/ranking selected source, use:
+
+```bash
+jev search "invoice handler" ./src --path-first --path-limit 10
+```
+
+This ranks names with local token overlap, **not** Blink's Jev Choice/walkers. It may miss behavior in opaque filenames; ordinary `jev search` remains the default. Output labels unverified `path-candidate` records separately from `source-chunk` hits. It calls no provider without `--semantic`; adding `--semantic --semantic-limit N` may transmit selected source to the configured provider and needs explicit egress/spend authorization. Search results are not persisted by `jev catalog` or independently verified behavior. See the [path ranking implementation](src/jev_cli/path_rank.py) and [API reconciliation record](docs/API-RECONCILIATION.md) for the retained behavior and qualification boundaries.
 
 ## Commands
 
@@ -123,7 +133,7 @@ The explicit limit makes recall/cost pruning visible instead of hiding a univers
 | `jev bench` | run frozen benchmark cases |
 | `jev cookbook` | list bundled recipes |
 | `jev doctor` | inspect provider/extras configuration without exposing secrets |
-| `jev catalog` | import/list/show versioned contracts and record/query observed outcomes in local SQLite |
+| `jev catalog` | import/find/show contracts, run stored questions, retain decisions, and record/query observed outcomes in SQLite |
 
 Graph execution and an MCP/HTTP server are intentionally deferred from V0.
 
@@ -134,6 +144,7 @@ This repository does **not** invent a new MCP registry.
 It can be used in several deployment shapes:
 
 - **standalone CLI** — direct TypeSafe System One / Jev calls;
+- **MCP client** — `catalog run --provider mcp --mcp-config ...` calls an existing compatible Jev service and retains its normalized receipt; the service owns fallback policy;
 - **Jev MCP** — a host may expose Jev as its own MCP because bounded semantic judgment is broadly reusable;
 - **Skills MCP** — a host may catalog this repository's `skill/SKILL.md` alongside its other skills;
 - **Models MCP** — a host may expose callable model/capability names and bridge them into the provider-neutral `ModelCallAdapter` for compact-reasoner experiments.
@@ -191,3 +202,10 @@ BGE and GLiNER are optional helpers. They do not silently remove legal semantic 
 Licensed under the [MIT License](LICENSE).
 
 Copyright (c) 2026 shetautnetjer.
+
+Lifecycle integrations: [CLI decision hooks](docs/HOOKS.md) map host events to catalog contracts and replay retained decisions without repeating inference.
+
+Optional typed-method pilot: [Pipelex integration](integrations/pipelex/README.md)
+wraps the existing contracts and receipts in an executable `.mthds` method.
+Direct and MCP provider responses share strict complete-batch validation. Pipelex
+remains an optional example dependency, not part of the default CLI installation.

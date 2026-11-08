@@ -1,5 +1,38 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Reconcile published fixes with local CLI capabilities
+
+This isolated candidate starts at published main `b4f41da` and imports the local
+hook/path-first APIs plus optional Rust, Pipelex and Monty source from the dirty
+`55dbf51` checkout. All 32 selected original source hashes, original HEAD and Git
+status remain unchanged. No installed launcher or service was changed. The
+[reconciliation record](docs/API-RECONCILIATION.md) explains source provenance,
+compatibility boundaries and the clean-checkout update route; its linked manifest
+distinguishes raw source, initial merge and final repairs.
+
+The direct-module launch guard now follows hook registration. Hook and direct
+catalog admission also reject pending caller transactions before entering their
+own transaction, fixing an independently reproduced caller-work rollback. Replay
+and unmapped hooks remain read-only. Four new ownership cases demonstrate
+preserved writes and durable reservation before provider evaluation. Five final-byte
+API controls fail on published main without the local APIs; the module-entry
+control also fails on the initial import before this repair. The core environment
+passes 157 tests with 26 optional skips; a separate environment exercises all
+189 tests, including Rust/Pipelex, without skips. All 134 published cases remain
+unchanged. Rust's 13 unit tests, offline build/Clippy, Monty fresh-pool replay,
+Ruff, mypy and package builds pass. The complete CLI parameter inventory matches
+the original except the retained published import-file prevalidation; malformed
+path diagnostics occur earlier. Decision models and the path-ranking AST are
+unchanged; separate full-AST comparisons isolate the two admission guards and
+their documentation. The publication scan passes.
+
+Swan's exact candidate map has 47 files and 1,325 symbols with no stale Python
+files and a verified hook/CLI caller. Nested Rust symbols are not covered by that
+map; Cargo and parity tests provide their qualification. Raw evidence and failure
+controls are in `/tmp/jev-api-reconcile-20261107/`. This is offline source and
+packaging qualification, pending review/publication and an explicit installation
+step; no live provider or optional BGE/GLiNER execution was performed.
+
 ## 2026-11-07 — Explain reviewed test boundaries
 
 After `9fc3d78`, review reported 70.15% docstring coverage; all touched production

@@ -1,0 +1,283 @@
+{
+  "as_of": "2026-11-07",
+  "published_base": "b4f41da6e5e4c9673644b881b1fad33f162892d9",
+  "source_head": "55dbf5193465445028245408265cfcbdcc2df5a4",
+  "source_branch": "codex/catalog-mcp-execution",
+  "source_state": "selected uncommitted local source; original tree and installation preserved",
+  "files": [
+    {
+      "path": ".gitignore",
+      "original_source_sha256": "bb9bd3e15d04edaa15363133e21f01b96a20930e7d79259e6ebe2ddd1e74e90e",
+      "initial_reconciled_import_sha256": "bb9bd3e15d04edaa15363133e21f01b96a20930e7d79259e6ebe2ddd1e74e90e",
+      "candidate_sha256": "910312df04f8d4e2c5aef8f57ac48885f412573139a2a457a0e6dca11deb504c",
+      "import_method": "three-way reconcile"
+    },
+    {
+      "path": "README.md",
+      "original_source_sha256": "77bca96fd25f1940034a6f2fd74ed0467fc70f4410db0a5a2984115d2c0e716a",
+      "initial_reconciled_import_sha256": "77bca96fd25f1940034a6f2fd74ed0467fc70f4410db0a5a2984115d2c0e716a",
+      "candidate_sha256": "c59a0421d22e73df4e443f7d0050612fa96b7744eb8b9f8fab1421e0eb634dfb",
+      "import_method": "three-way reconcile"
+    },
+    {
+      "path": "docs/HOOKS.md",
+      "original_source_sha256": "1c3f4c7857f48d1f60f94b58f3a783f1296598fbd757ff981e891643946be62a",
+      "initial_reconciled_import_sha256": "1c3f4c7857f48d1f60f94b58f3a783f1296598fbd757ff981e891643946be62a",
+      "candidate_sha256": "c978c494cec9111097601a5c9314eca22a2b462db83bb505bcac5741c81cc656",
+      "import_method": "new source import"
+    },
+    {
+      "path": "docs/INTEGRATIONS.md",
+      "original_source_sha256": "7fba8234665e5da821b5f166f892c6dd4f33f577c4e662beee9eab1d09b90a24",
+      "initial_reconciled_import_sha256": "2f698e4e48dd677baabbdf026501a11d37b47e3b82044896d869c70fde39ab7d",
+      "candidate_sha256": "2f698e4e48dd677baabbdf026501a11d37b47e3b82044896d869c70fde39ab7d",
+      "import_method": "three-way reconcile"
+    },
+    {
+      "path": "docs/QUESTION_GRAPH.md",
+      "original_source_sha256": "274fde4abf9b6f857dbdeb78068bca1e9ae9e8fff2daf1755b36f7e67aebb574",
+      "initial_reconciled_import_sha256": "274fde4abf9b6f857dbdeb78068bca1e9ae9e8fff2daf1755b36f7e67aebb574",
+      "candidate_sha256": "274fde4abf9b6f857dbdeb78068bca1e9ae9e8fff2daf1755b36f7e67aebb574",
+      "import_method": "three-way reconcile"
+    },
+    {
+      "path": "integrations/monty/README.md",
+      "original_source_sha256": "b108940ac6616ed032eee13bef8723b0e736e8ed83e3073f82f0d70adf10552d",
+      "initial_reconciled_import_sha256": "b108940ac6616ed032eee13bef8723b0e736e8ed83e3073f82f0d70adf10552d",
+      "candidate_sha256": "6811b6007effbe6d81c90ff5e4c4d0f7150f76dfed085c9a334a0ea15e50f45c",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/monty/probe.py",
+      "original_source_sha256": "7459ebc60f1b1dcc445db8ad52602f1269ae5cb8c1fa7e7621c906333aa8e68e",
+      "initial_reconciled_import_sha256": "7459ebc60f1b1dcc445db8ad52602f1269ae5cb8c1fa7e7621c906333aa8e68e",
+      "candidate_sha256": "7459ebc60f1b1dcc445db8ad52602f1269ae5cb8c1fa7e7621c906333aa8e68e",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "integrations/monty/requirements.txt",
+      "original_source_sha256": "4e3dbc159fc1f60bc23dc4a70ea267818c1f940afdf08b76b8a35b713c5a37ab",
+      "initial_reconciled_import_sha256": "4e3dbc159fc1f60bc23dc4a70ea267818c1f940afdf08b76b8a35b713c5a37ab",
+      "candidate_sha256": "4e3dbc159fc1f60bc23dc4a70ea267818c1f940afdf08b76b8a35b713c5a37ab",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/.pipelex/inference/backends.toml",
+      "original_source_sha256": "e9636223523e282462f8bb3141b00b31df8552aca113626e63c28c8fc5771b92",
+      "initial_reconciled_import_sha256": "e9636223523e282462f8bb3141b00b31df8552aca113626e63c28c8fc5771b92",
+      "candidate_sha256": "e9636223523e282462f8bb3141b00b31df8552aca113626e63c28c8fc5771b92",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/README.md",
+      "original_source_sha256": "f7721df6f89fea3968685264f678afabfa4fd12c2bf7a1461ed25213af0356b4",
+      "initial_reconciled_import_sha256": "f7721df6f89fea3968685264f678afabfa4fd12c2bf7a1461ed25213af0356b4",
+      "candidate_sha256": "d13402b6816b31bcc5e42db91cc3a250c0268e37c0738eeb7a05ac1b2c725471",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/SKILL.md",
+      "original_source_sha256": "f66546c587529ee3307feff2d5b66a007bf4cfd69a0f327cf7835f0996459ac3",
+      "initial_reconciled_import_sha256": "f66546c587529ee3307feff2d5b66a007bf4cfd69a0f327cf7835f0996459ac3",
+      "candidate_sha256": "f66546c587529ee3307feff2d5b66a007bf4cfd69a0f327cf7835f0996459ac3",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/contract.yaml",
+      "original_source_sha256": "c86a33250b5d6391250ac5ce483208e59fdd3c59087a719ac5f071995c7db63a",
+      "initial_reconciled_import_sha256": "c86a33250b5d6391250ac5ce483208e59fdd3c59087a719ac5f071995c7db63a",
+      "candidate_sha256": "c86a33250b5d6391250ac5ce483208e59fdd3c59087a719ac5f071995c7db63a",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/decision.mthds",
+      "original_source_sha256": "47e9ba2476648c639b1c0faf2e2477109e7bdf655d3e4f3d0b7af517aed5d193",
+      "initial_reconciled_import_sha256": "47e9ba2476648c639b1c0faf2e2477109e7bdf655d3e4f3d0b7af517aed5d193",
+      "candidate_sha256": "47e9ba2476648c639b1c0faf2e2477109e7bdf655d3e4f3d0b7af517aed5d193",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/function_only_runtime.py",
+      "original_source_sha256": "6d77b1f009bfcec44d7565ced6cf3588ea193537d369b4c56ea972c415aef083",
+      "initial_reconciled_import_sha256": "6d77b1f009bfcec44d7565ced6cf3588ea193537d369b4c56ea972c415aef083",
+      "candidate_sha256": "6d77b1f009bfcec44d7565ced6cf3588ea193537d369b4c56ea972c415aef083",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "integrations/pipelex/jev_method.py",
+      "original_source_sha256": "ca0db22383593fb3592abb289749bb657d877a44f1141d0cd6de78750030b712",
+      "initial_reconciled_import_sha256": "ca0db22383593fb3592abb289749bb657d877a44f1141d0cd6de78750030b712",
+      "candidate_sha256": "ca0db22383593fb3592abb289749bb657d877a44f1141d0cd6de78750030b712",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "integrations/pipelex/projection.json",
+      "original_source_sha256": "5a6fb9ee5e4595ef64bb28ba0a1562bd2e7096484cfe29c84a784b63afb685db",
+      "initial_reconciled_import_sha256": "5a6fb9ee5e4595ef64bb28ba0a1562bd2e7096484cfe29c84a784b63afb685db",
+      "candidate_sha256": "5a6fb9ee5e4595ef64bb28ba0a1562bd2e7096484cfe29c84a784b63afb685db",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/requirements.txt",
+      "original_source_sha256": "3d17a2f772b639795e606d5d434d8e178243410e729456fcda3e890c2a729c07",
+      "initial_reconciled_import_sha256": "3d17a2f772b639795e606d5d434d8e178243410e729456fcda3e890c2a729c07",
+      "candidate_sha256": "3d17a2f772b639795e606d5d434d8e178243410e729456fcda3e890c2a729c07",
+      "import_method": "new source import"
+    },
+    {
+      "path": "integrations/pipelex/run_pilot.py",
+      "original_source_sha256": "fa65e9bd5b2b11901aee71a298116e5c2bac4bc1f22d61dd7eecc64ff933491c",
+      "initial_reconciled_import_sha256": "fa65e9bd5b2b11901aee71a298116e5c2bac4bc1f22d61dd7eecc64ff933491c",
+      "candidate_sha256": "fa65e9bd5b2b11901aee71a298116e5c2bac4bc1f22d61dd7eecc64ff933491c",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "integrations/pipelex/state.json",
+      "original_source_sha256": "2fec7f69c95d3bc5ff6dffe143f43dcb76ca19f534fe42114e4272e3d0ac0f75",
+      "initial_reconciled_import_sha256": "2fec7f69c95d3bc5ff6dffe143f43dcb76ca19f534fe42114e4272e3d0ac0f75",
+      "candidate_sha256": "2fec7f69c95d3bc5ff6dffe143f43dcb76ca19f534fe42114e4272e3d0ac0f75",
+      "import_method": "new source import"
+    },
+    {
+      "path": "rust/skills-rs/Cargo.lock",
+      "original_source_sha256": "8808701ce7120b7e6ccc07e027e394339b3c0330fa86ade7221144af0a85bf4d",
+      "initial_reconciled_import_sha256": "8808701ce7120b7e6ccc07e027e394339b3c0330fa86ade7221144af0a85bf4d",
+      "candidate_sha256": "8808701ce7120b7e6ccc07e027e394339b3c0330fa86ade7221144af0a85bf4d",
+      "import_method": "new source import"
+    },
+    {
+      "path": "rust/skills-rs/Cargo.toml",
+      "original_source_sha256": "ef4bc32d773c47bd860c2db2daab0f086d125341093e5f74aa38af13f05a4f3c",
+      "initial_reconciled_import_sha256": "ef4bc32d773c47bd860c2db2daab0f086d125341093e5f74aa38af13f05a4f3c",
+      "candidate_sha256": "ef4bc32d773c47bd860c2db2daab0f086d125341093e5f74aa38af13f05a4f3c",
+      "import_method": "new source import"
+    },
+    {
+      "path": "rust/skills-rs/README.md",
+      "original_source_sha256": "900f0fd19f2a53d06a22fc74c80aa292cdb15b4223f4156b2a78e4cacb8ad78e",
+      "initial_reconciled_import_sha256": "900f0fd19f2a53d06a22fc74c80aa292cdb15b4223f4156b2a78e4cacb8ad78e",
+      "candidate_sha256": "900f0fd19f2a53d06a22fc74c80aa292cdb15b4223f4156b2a78e4cacb8ad78e",
+      "import_method": "new source import"
+    },
+    {
+      "path": "rust/skills-rs/src/lib.rs",
+      "original_source_sha256": "26f4d86b13aac1fa5b74dc063a4bb77c0887af65634c30f43b1c9e4a2a02b544",
+      "initial_reconciled_import_sha256": "26f4d86b13aac1fa5b74dc063a4bb77c0887af65634c30f43b1c9e4a2a02b544",
+      "candidate_sha256": "26f4d86b13aac1fa5b74dc063a4bb77c0887af65634c30f43b1c9e4a2a02b544",
+      "import_method": "new source import"
+    },
+    {
+      "path": "rust/skills-rs/src/main.rs",
+      "original_source_sha256": "4a2a60412b6a674968b26c8070985794fb9310c0bba98f9988c07b9e8b46868c",
+      "initial_reconciled_import_sha256": "4a2a60412b6a674968b26c8070985794fb9310c0bba98f9988c07b9e8b46868c",
+      "candidate_sha256": "4a2a60412b6a674968b26c8070985794fb9310c0bba98f9988c07b9e8b46868c",
+      "import_method": "new source import"
+    },
+    {
+      "path": "scripts/verify_jev_cli_publication.py",
+      "original_source_sha256": "8d4227a1ae33a1d4bee055edde2654c88614e419f4758ca862a9291e2cfcb640",
+      "initial_reconciled_import_sha256": "8d4227a1ae33a1d4bee055edde2654c88614e419f4758ca862a9291e2cfcb640",
+      "candidate_sha256": "8d4227a1ae33a1d4bee055edde2654c88614e419f4758ca862a9291e2cfcb640",
+      "import_method": "three-way reconcile",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "src/jev_cli/cli.py",
+      "original_source_sha256": "d568e568232fc7ea75933d1be73bcea347584e63a6f23e7aae45c9cdb800e659",
+      "initial_reconciled_import_sha256": "9b1e5a812df34a9002faa71064cf9154f6abdf85fe2d1734c756ee825aaf7d46",
+      "candidate_sha256": "84fd9d1e001339c419f2f5172000fe3ed9e9be3d72312eba66bd3d0ecc7c4605",
+      "import_method": "three-way reconcile",
+      "initial_to_final_full_ast_equal": false
+    },
+    {
+      "path": "src/jev_cli/hooks.py",
+      "original_source_sha256": "876520b629584a532e3538ec34847e28c2bfa367a4db737c93f494cd989b33e8",
+      "initial_reconciled_import_sha256": "876520b629584a532e3538ec34847e28c2bfa367a4db737c93f494cd989b33e8",
+      "candidate_sha256": "0700a2058c2146b318b4493dac695856298af38361d997794cb2058f7be32f91",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": false
+    },
+    {
+      "path": "src/jev_cli/path_rank.py",
+      "original_source_sha256": "b65c84d8c72b9666dfd98ce3b5b8c2749c7f4f05d43d5ddec0e36858ddeef042",
+      "initial_reconciled_import_sha256": "b65c84d8c72b9666dfd98ce3b5b8c2749c7f4f05d43d5ddec0e36858ddeef042",
+      "candidate_sha256": "b65c84d8c72b9666dfd98ce3b5b8c2749c7f4f05d43d5ddec0e36858ddeef042",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "tests/test_hooks.py",
+      "original_source_sha256": "c301e05331aeb44ac799af143728f8b94e23c5e8486397e6ca352df18fbbbc75",
+      "initial_reconciled_import_sha256": "c301e05331aeb44ac799af143728f8b94e23c5e8486397e6ca352df18fbbbc75",
+      "candidate_sha256": "374dcfdcabe5366abbcb30888a83dfa56376d54a33fc734d941a5d6674fd2f77",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": false
+    },
+    {
+      "path": "tests/test_pipelex_integration.py",
+      "original_source_sha256": "9bd7b22190cd287219c6e2a280d80d246c09d868da4002fe659c5e5737680e1f",
+      "initial_reconciled_import_sha256": "9bd7b22190cd287219c6e2a280d80d246c09d868da4002fe659c5e5737680e1f",
+      "candidate_sha256": "9bd7b22190cd287219c6e2a280d80d246c09d868da4002fe659c5e5737680e1f",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "tests/test_search_path_first.py",
+      "original_source_sha256": "01ab23ddb5622e8ca770c53ff917a3b00dd67e3c1dbba79e1f00bed597f9e5fa",
+      "initial_reconciled_import_sha256": "01ab23ddb5622e8ca770c53ff917a3b00dd67e3c1dbba79e1f00bed597f9e5fa",
+      "candidate_sha256": "01ab23ddb5622e8ca770c53ff917a3b00dd67e3c1dbba79e1f00bed597f9e5fa",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    },
+    {
+      "path": "tests/test_skills_rs.py",
+      "original_source_sha256": "1e6ceb9328bd34311e7c8735c2fade559f418d11cdb14148eb8d72335d6600ef",
+      "initial_reconciled_import_sha256": "1e6ceb9328bd34311e7c8735c2fade559f418d11cdb14148eb8d72335d6600ef",
+      "candidate_sha256": "1e6ceb9328bd34311e7c8735c2fade559f418d11cdb14148eb8d72335d6600ef",
+      "import_method": "new source import",
+      "initial_to_final_full_ast_equal": true
+    }
+  ],
+  "new_followup_files": [
+    "tests/test_api_compatibility.py",
+    "tests/test_transaction_ownership.py",
+    "docs/API-RECONCILIATION.md",
+    "docs/API-RECONCILIATION-IMPORT.json"
+  ],
+  "reconciliation_repairs": [
+    "Register hook before the direct-module app() call",
+    "Retain published secure traversal in the local path-first command",
+    "Reject pending caller transactions before new hook and direct catalog admission; retain read-only replay/skip and durable reservation-before-inference",
+    "Formatting isolated by AST comparison from the two transaction guards and registration repair",
+    "Portable documentation links and current qualification boundaries",
+    "Ignore generated nested Pipelex traces"
+  ],
+  "excluded": [
+    ".aya",
+    ".idea",
+    "HERMES.md",
+    "architecture.html",
+    "architecture.tsx",
+    "integrations/monty/qualification.json",
+    "generated Pipelex traces",
+    "generated caches/builds",
+    "credentials/private configuration/live databases"
+  ],
+  "retained_published": [
+    "pyproject.toml",
+    "uv.lock",
+    "models and reviewed provider/traversal source",
+    "catalog source except the explicit admission guard and docstring",
+    "all published tests"
+  ],
+  "published_source_repair": {
+    "path": "src/jev_cli/catalog.py",
+    "base_sha256": "7a63e1629f41b78a49963db5d1db43bafb111e7d1a8ac96c9e1577d570572778",
+    "candidate_sha256": "38f408e9c641b79d82f38982899263bcee1f60435341ba7f5332451b8e0d3e1d",
+    "change": "Reject pending caller transaction before entering transaction context; clarify docstring. Other full AST unchanged."
+  }
+}

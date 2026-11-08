@@ -30,6 +30,7 @@ from jev_cli.models import (
     ScoreQuestion,
     StatePacket,
 )
+from jev_cli.path_rank import rank_paths
 from jev_cli.providers.base import ProviderAdapter
 from jev_cli.providers.mock import MockProvider
 from jev_cli.providers.typesafe import TypeSafeProvider
@@ -254,15 +255,39 @@ def search(
     chunk_lines: Annotated[int, typer.Option("--chunk-lines", min=1)] = 80,
     overlap: Annotated[int, typer.Option("--overlap", min=0)] = 10,
     no_gitignore: Annotated[bool, typer.Option("--no-gitignore")] = False,
+    path_first: Annotated[bool, typer.Option("--path-first")] = False,
+    path_limit: Annotated[int | None, typer.Option("--path-limit", min=1)] = None,
     gliner_label: Annotated[list[str] | None, typer.Option("--gliner-label")] = None,
 ) -> None:
-    """Recall and rank text chunks; optionally ask Jev to judge an explicit candidate pool."""
+    """Recall and rank text chunks; optionally prune by local path names before reading."""
+    if path_first and path_limit is None:
+        raise typer.BadParameter(
+            "--path-first requires explicit --path-limit (path recall may miss opaque names)"
+        )
+    if path_limit is not None and not path_first:
+        raise typer.BadParameter("--path-limit requires --path-first")
     try:
         files = discover_file_records(inputs, respect_gitignore=not no_gitignore)
     except SecureTraversalUnavailableError as exc:
         # The message quotes the user's path, which may contain "[" markup characters.
         err_console.print(f"[red]Error:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from None
+    files_discovered = len(files)
+    path_candidates = []
+    if path_first:
+        ranked = rank_paths(query, files)
+        assert path_limit is not None
+        selected = ranked[:path_limit]
+        path_candidates = [
+            {
+                "path": str(file.path),
+                "path_score": score,
+                "evidence_type": "path-candidate",
+                "verified": False,
+            }
+            for file, score in selected
+        ]
+        files = [file for file, _ in selected]
     chunks = []
     for discovered in files:
         text = read_discovered_text(discovered)
@@ -309,13 +334,24 @@ def search(
 
     payload = {
         "query": query,
-        "files_discovered": len(files),
+        "files_discovered": files_discovered,
         "chunks_considered": len(chunks),
         "retriever": getattr(retriever, "name", retriever_name),
         "retriever_model": getattr(retriever, "model_id", None),
         "semantic_pool": semantic_limit if semantic else None,
-        "hits": [hit.as_dict() for hit in hits[:top]],
+        "hits": [
+            {**hit.as_dict(), **({"evidence_type": "source-chunk"} if path_first else {})}
+            for hit in hits[:top]
+        ],
     }
+    if path_first:
+        payload.update(
+            {
+                "path_candidates": path_candidates,
+                "files_selected": len(files),
+                "catalog_recorded": False,
+            }
+        )
     typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
@@ -638,6 +674,39 @@ def catalog_outcomes(
 
     with closing(connect(db)) as store:
         typer.echo(dump_json(list_outcomes(store, run_id)))
+
+
+@app.command("hook")
+def hook(
+    config: Annotated[Path, typer.Argument(help="Trusted event-name to contract/version JSON")],
+    db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
+    event_file: Annotated[Path | None, typer.Option("--event-file")] = None,
+    provider_name: Annotated[str, typer.Option("--provider")] = "typesafe",
+    mcp_config: Annotated[Path | None, typer.Option("--mcp-config")] = None,
+) -> None:
+    """Evaluate a mapped lifecycle event from JSON stdin/file; return a retained recommendation."""
+    import sqlite3
+    import sys
+    from contextlib import closing
+
+    from jev_cli.catalog import connect
+    from jev_cli.hooks import HookConfig, HookEvent, run_hook
+
+    if mcp_config and provider_name != "mcp":
+        raise typer.BadParameter("--mcp-config requires --provider mcp")
+    try:
+        mapping = HookConfig.model_validate_json(config.read_text(encoding="utf-8"))
+        raw = event_file.read_text(encoding="utf-8") if event_file else sys.stdin.read()
+        event = HookEvent.model_validate_json(raw)
+        with closing(connect(db)) as store:
+            result = run_hook(store, mapping, event, lambda: _provider(provider_name, mcp_config))
+    except (ValueError, RuntimeError, OSError, sqlite3.Error):
+        # Validation/provider errors can contain input: keep the CLI failure content-free.
+        err_console.print("Hook failed: invalid input, admission, or retained event conflict")
+        raise typer.Exit(1) from None
+    typer.echo(dump_json(result))
+    if result["status"] in {"pending", "failed"}:
+        raise typer.Exit(2)
 
 
 if __name__ == "__main__":

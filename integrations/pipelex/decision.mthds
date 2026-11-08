@@ -1,0 +1,58 @@
+domain = "jev_workflows"
+description = "Typed advisory decisions over caller-prepared evidence."
+main_pipe = "evaluate_and_route"
+
+[concept.DecisionInput]
+description = "An existing Jev DecisionContract paired with its StatePacket."
+structure = "DecisionInput"
+
+[concept.DecisionOutput]
+description = "An unchanged Jev receipt and its caller-defined routing disposition."
+structure = "DecisionOutput"
+
+[pipe.evaluate_and_route]
+type = "PipeSequence"
+description = "Evaluate a typed decision contract and follow its declared result branch."
+inputs = { packet = "DecisionInput" }
+output = "DecisionOutput"
+steps = [
+    { pipe = "evaluate_contract", result = "decision" },
+    { pipe = "route_decision", result = "result" },
+]
+
+[pipe.evaluate_contract]
+type = "PipeFunc"
+description = "Call the existing Jev provider once and preserve the decision receipt."
+inputs = { packet = "DecisionInput" }
+output = "DecisionOutput"
+function_name = "jev_evaluate_contract"
+
+[pipe.route_decision]
+type = "PipeCondition"
+description = "Branch on the caller-defined composition without granting execution authority."
+inputs = { decision = "DecisionOutput" }
+output = "DecisionOutput"
+expression = "decision.disposition"
+outcomes = { ready = "return_ready", needs_evidence = "return_needs_evidence" }
+default_outcome = "return_unknown"
+
+[pipe.return_ready]
+type = "PipeFunc"
+description = "Return the ready advisory decision to the host."
+inputs = { decision = "DecisionOutput" }
+output = "DecisionOutput"
+function_name = "jev_return_decision"
+
+[pipe.return_needs_evidence]
+type = "PipeFunc"
+description = "Return an evidence-needed decision for the host to resolve."
+inputs = { decision = "DecisionOutput" }
+output = "DecisionOutput"
+function_name = "jev_needs_evidence"
+
+[pipe.return_unknown]
+type = "PipeFunc"
+description = "Return an unrepresented disposition unchanged for host handling."
+inputs = { decision = "DecisionOutput" }
+output = "DecisionOutput"
+function_name = "jev_unknown_route"

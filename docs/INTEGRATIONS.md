@@ -2,6 +2,11 @@
 
 `jev-cli` is deliberately usable without MCP. MCP is an integration boundary, not the identity of the project.
 
+An optional [Monty feasibility probe](../integrations/monty/README.md) demonstrates
+host callbacks into the existing question catalog, pause/resume and receipt
+replay with mock answers. It is an isolated example, not a deployed runner or
+a new question database.
+
 ## Jev MCP
 
 Jev is unusual enough to justify a dedicated MCP in systems where the same bounded semantic decision service is reused across coding, research, computer use, memory, routing, and other domains.
@@ -29,6 +34,11 @@ A host Skills MCP can maintain its own TypeScript catalog and skill taxonomy. Us
 - orchestration.
 
 The taxonomy belongs to the Skills MCP/catalog layer. `jev-cli` does not become a second skill registry.
+
+The [Skills-rs projector](../rust/skills-rs/README.md) projects the qualified
+Pipelex method into a source-fingerprinted artifact and replays retained receipts
+in Rust. Its artifact is linked from the existing method skill for catalog reads.
+It does not replace the Skills MCP or add inference/action execution to it.
 
 Skills may describe how to build or modify software, but a skill document itself does not grant execution authority. The host agent/runtime still owns permissions and tool access.
 
@@ -169,3 +179,10 @@ reuse and comparison. No autonomous generative-question model is bundled here.
 and tags, with an optional exact scope filter and no hidden top-k cutoff. Vector
 retrieval, automatic lesson extraction, workflow loops, and skill/Rust promotion
 remain separate experimental/future capabilities.
+
+## Optional Pipelex method integration
+
+The [Pipelex pilot](../integrations/pipelex/README.md) supplies a typed method and
+registered Python adapter around the existing provider interface. It does not
+add a server, change the caller's action authority, or replace catalog receipts.
+Keep profile identity, source references and effect verification with the host.

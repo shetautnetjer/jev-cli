@@ -1,0 +1,3 @@
+# The pilot uses only registered Python functions. Jev owns its own provider route.
+[internal]
+enabled = true
