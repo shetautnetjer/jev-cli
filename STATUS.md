@@ -161,3 +161,39 @@ SUPERAGENT retains native receipts, frozen red/green evidence, source hashes and
 independent review. No live Jev provider, runtime defaults or original dirty
 checkout changed. The current Swan map was refreshed for the isolated review
 worktree; publication-map refresh follows integration.
+
+## 2026-11-07 — Serialize concurrent imports and report writer contention
+
+PR #3's next review at `1b82ed2` found import identity lookup outside its write
+reservation and uncaught database contention in the run/observe commands.
+Fresh imports now acquire `BEGIN IMMEDIATE` before fingerprint lookup and retain
+the entire contract/question batch in that transaction. Two real SQLite
+connections prove identical and conflicting import attempts cannot interleave
+between lookup and insert; subsequent identical imports remain idempotent and
+different content retains the version-mismatch error.
+
+Active caller transactions now use an import-local savepoint and a no-row write
+before lookup to acquire the writer. This deliberately improves the former
+conditional behavior: an already-imported contract returned before `with db`,
+but a new import committed the caller's pending transaction. Imports now leave
+active caller transactions under caller control. A stale WAL read snapshot
+fails with SQLite's native error without ending that transaction. A late batch
+failure rolls back only the import unless SQLite itself aborts the entire
+transaction; that native abort/error remains visible rather than being masked
+by savepoint cleanup.
+
+Run, observe and import CLI commands report fixed database diagnostics without
+SQLite/receipt contents and close acquired connections. The contention tests use
+two actual connections and a 1 ms busy timeout; no provider evaluation occurs,
+and the run command still closes its provider. They preserve existing decisions
+and outcomes and do not claim uncertain failures are safe to retry blindly.
+
+The final offline suite passes 114 tests with native local IPC. Ruff lint/format
+and mypy over 22 source files pass. The separate evidence packet at
+`/tmp/jev-pr3-round2-20261107/` retains the base interleaving failures, follow-up
+savepoint cleanup failure, successful checks and source hashes. The exact
+publication Swan map is refreshed: 35 files, 971 symbols, zero stale/new files,
+with `_import_transaction` resolving to the current source. No schema, provider
+policy, permission default, service or live catalog changed. Original Sonnet
+qualification remains frozen; coordinating review and publication are recorded
+by SUPERAGENT.

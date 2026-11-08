@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +90,32 @@ def connect(path: Path) -> sqlite3.Connection:
     return db
 
 
+@contextmanager
+def _import_transaction(db: sqlite3.Connection) -> Iterator[None]:
+    """Reserve the writer before lookup without committing an active caller transaction."""
+    if not db.in_transaction:
+        with db:
+            db.execute("BEGIN IMMEDIATE")
+            yield
+        return
+
+    db.execute("SAVEPOINT jev_import_contract")
+    try:
+        # A savepoint alone does not reserve the writer. This no-row write
+        # upgrades a deferred transaction, or fails if its snapshot is stale.
+        db.execute("UPDATE contracts SET fingerprint=fingerprint WHERE 0")
+        yield
+    except BaseException:
+        # Some SQLite failures abort the whole transaction and remove its
+        # savepoints. Preserve that original error instead of masking it.
+        if db.in_transaction:
+            db.execute("ROLLBACK TO jev_import_contract")
+            db.execute("RELEASE jev_import_contract")
+        raise
+    else:
+        db.execute("RELEASE jev_import_contract")
+
+
 def import_contract(
     db: sqlite3.Connection,
     contract: DecisionContract,
@@ -98,17 +125,17 @@ def import_contract(
 ) -> str:
     raw = contract.model_dump(mode="json", exclude_none=True)
     digest = sha256_json(raw)
-    existing = db.execute(
-        "SELECT fingerprint FROM contracts WHERE contract_id=? AND version=?",
-        (contract.id, contract.version),
-    ).fetchone()
-    if existing:
-        if existing["fingerprint"] != digest:
-            raise ValueError(
-                "Contract version already exists with different content; increment its version"
-            )
-        return digest
-    with db:
+    with _import_transaction(db):
+        existing = db.execute(
+            "SELECT fingerprint FROM contracts WHERE contract_id=? AND version=?",
+            (contract.id, contract.version),
+        ).fetchone()
+        if existing:
+            if existing["fingerprint"] != digest:
+                raise ValueError(
+                    "Contract version already exists with different content; increment its version"
+                )
+            return digest
         db.execute(
             "INSERT INTO contracts VALUES (?,?,?,?,?,?,?)",
             (

@@ -396,6 +396,7 @@ def catalog_run(
     mcp_config: Annotated[Path | None, typer.Option("--mcp-config")] = None,
 ) -> None:
     """Run an imported contract and retain its decision; no effect or success is assumed."""
+    import sqlite3
     from contextlib import closing
 
     from jev_cli.catalog import connect, run_contract
@@ -415,6 +416,12 @@ def catalog_run(
                 run_id=run_id,
                 step_id=step_id,
             )
+    except sqlite3.Error:
+        err_console.print(
+            "[red]Error:[/red] Catalog database operation failed; "
+            "inspect the run/step before retrying"
+        )
+        raise typer.Exit(1) from None
     except (ValueError, RuntimeError) as exc:
         err_console.print(f"[red]Error:[/red] {exc}")
         raise typer.Exit(1) from None
@@ -446,12 +453,13 @@ def catalog_observe(
     effect_receipt_ref: Annotated[str | None, typer.Option("--effect-ref")] = None,
 ) -> None:
     """Attach one caller-observed outcome to a completed decision; does not verify the claim."""
+    import sqlite3
     from contextlib import closing
 
     from jev_cli.catalog import connect, observe_decision
 
-    with closing(connect(db)) as store:
-        try:
+    try:
+        with closing(connect(db)) as store:
             observe_decision(
                 store,
                 run_id,
@@ -459,8 +467,12 @@ def catalog_observe(
                 observed_result=observed_result,
                 effect_receipt_ref=effect_receipt_ref,
             )
-        except ValueError as exc:
-            raise typer.BadParameter(str(exc)) from None
+    except sqlite3.Error:
+        raise typer.BadParameter(
+            "Catalog database operation failed; inspect the run/step before retrying"
+        ) from None
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from None
     typer.echo("recorded")
 
 
@@ -489,15 +501,22 @@ def catalog_import(
     scope: Annotated[str, typer.Option("--scope")] = "general",
 ) -> None:
     """Import an existing versioned Decision Contract without calling a provider."""
+    import sqlite3
+    from contextlib import closing
+
     from jev_cli.catalog import connect, import_contract
 
-    with connect(db) as store:
-        try:
+    try:
+        with closing(connect(db)) as store:
             digest = import_contract(
                 store, load_contract(contract_file), scope=scope, source_ref=str(contract_file)
             )
-        except ValueError as exc:
-            raise typer.BadParameter(str(exc)) from None
+    except sqlite3.Error:
+        raise typer.BadParameter(
+            "Catalog database operation failed; inspect the contract before retrying"
+        ) from None
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from None
     typer.echo(digest)
 
 
