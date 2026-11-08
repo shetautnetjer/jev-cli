@@ -193,6 +193,7 @@ def record_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(catalog_module, "connect", tracking_connect)
 
     def record(path: Path | None = None, *, step: str = "step-1"):
+        """Invoke the real CLI and check every retained handle after success or failure."""
         result = runner.invoke(
             app,
             [
@@ -228,6 +229,7 @@ def record_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 
 def _assert_clean_cli_error(result, *, absent: str | None = None) -> None:
+    """Require a normal usage-error exit, with no traceback or supplied private marker."""
     assert result.exit_code == 2, result.output
     assert isinstance(result.exception, SystemExit), repr(result.exception)
     assert "Traceback" not in result.output
@@ -360,12 +362,14 @@ def test_catalog_import_rejects_non_file_inputs(tmp_path: Path, kind: str) -> No
 def test_catalog_import_handles_post_validation_read_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error_type: type[OSError]
 ) -> None:
+    """A valid path can fail when opened; that race must not create a catalog or leak input."""
     path = tmp_path / "contract.json"
     path.write_text(json.dumps(_LITERAL_CONTRACT), encoding="utf-8")
     db_path = tmp_path / "catalog.sqlite"
     original = Path.read_text
 
     def failed_read(self: Path, *args, **kwargs):
+        """Fail only the contract read after path validation, preserving unrelated reads."""
         if self == path:
             raise error_type(SECRET)
         return original(self, *args, **kwargs)
@@ -407,6 +411,7 @@ def test_catalog_import_handles_invalid_contract_file_without_content_leak(
 def test_catalog_import_keeps_version_mismatch_and_closes_connections(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Input-error handling must preserve actionable version conflicts and close both opens."""
     import sqlite3
 
     import jev_cli.catalog as catalog_module
@@ -444,6 +449,7 @@ def test_catalog_import_keeps_version_mismatch_and_closes_connections(
 def test_catalog_read_commands_close_connection(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str, deny_read: bool
 ) -> None:
+    """Check real retained handles after materialized reads and SQLite-denied SELECTs."""
     import sqlite3
     from contextlib import closing
 
@@ -455,6 +461,7 @@ def test_catalog_read_commands_close_connection(
     opened: list[sqlite3.Connection] = []
 
     def tracked_connect(path: Path) -> sqlite3.Connection:
+        """Retain the actual handle and optionally deny SELECT only after initialization."""
         db = connect(path)
         opened.append(db)
         if deny_read:

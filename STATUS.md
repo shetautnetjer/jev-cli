@@ -1,5 +1,18 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Explain reviewed test boundaries
+
+After `9fc3d78`, review reported 70.15% docstring coverage; all touched production
+functions were already documented. Twelve concise scenario/helper docstrings now
+explain SQLite closure and path races, failed-run retry prevention, invalid response
+batches and symlink anchoring. This follow-up changes four test files and this note;
+no production code, assertions, inputs or historical evidence were changed.
+The four full ASTs match `9fc3d78` after removing docstrings, with all 195 assertions
+and 58 test functions unchanged. All 134 tests, Ruff checks/format and mypy pass;
+independent review is clear. Exact Swan map: 35 files, 1,008 symbols, zero stale/new
+files. Evidence is in `/tmp/jev-pr3-test-contract-docs-20261107/`; remote coverage
+must be checked after publication rather than inferred from these local checks.
+
 ## 2026-11-07 — Close remaining catalog read connections
 
 The final PR summary review identified three read commands that used SQLite's

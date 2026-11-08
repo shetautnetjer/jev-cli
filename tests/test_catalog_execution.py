@@ -76,6 +76,7 @@ def test_catalog_run_retains_decision_then_observation(tmp_path: Path) -> None:
 
 
 def test_catalog_failed_call_is_retained_and_not_retried(tmp_path: Path) -> None:
+    """A second use of the failed run/step sees its reservation, not another provider call."""
     import pytest
 
     from jev_cli.catalog import connect, import_contract, run_contract

@@ -193,6 +193,7 @@ def test_absolute_root_open_closes_descriptors_on_intermediate_failure(monkeypat
     closed: list[int] = []
 
     def fake_open(path, flags, mode=0o777, *, dir_fd=None):
+        """Return one owned descriptor, then fail the next ancestor open to exercise cleanup."""
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -308,6 +309,7 @@ def test_glob_with_parent_relative_prefix_finds_siblings(
 def test_glob_with_symlinked_prefix_finds_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A symlink in the literal glob prefix is valid when reads retain the canonical anchor."""
     real = tmp_path / "real"
     real.mkdir()
     (real / "nested").mkdir()
@@ -334,6 +336,7 @@ def test_glob_with_symlinked_prefix_finds_files(
 def test_glob_internal_symlink_alias_cannot_replace_canonical_candidate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, alias_first: bool
 ) -> None:
+    """Either enumeration order must retain the readable canonical path over its inner alias."""
     root = tmp_path / "repo"
     real_dir = root / "real_dir"
     real_dir.mkdir(parents=True)

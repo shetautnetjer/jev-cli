@@ -24,6 +24,7 @@ def _batch_contract() -> DecisionContract:
 )
 def test_direct_provider_rejects_invalid_batch_without_leaking_content(fault: str) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
+        """Inject one defect into a valid 32-answer response; the client must reject the batch."""
         assert len(json.loads(request.content)["questions"]) == 32
         answers = {f"q{i}": {"type": "noul", "noul": 0.9} for i in range(32)}
         body = {
