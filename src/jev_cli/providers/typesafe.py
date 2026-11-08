@@ -36,6 +36,11 @@ class TypeSafeProvider:
         return self._api_key or resolve_typesafe_api_key().value
 
     def evaluate(self, contract: DecisionContract, state: StatePacket) -> ProviderResult:
+        """Make one direct request, validating model identity, answers and usage.
+
+        HTTP and transport failures become bounded diagnostics; response bodies
+        and credentials are excluded from those errors.
+        """
         payload = {
             "state": state.data,
             "model": contract.model,

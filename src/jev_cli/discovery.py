@@ -187,6 +187,7 @@ def _glob_roots(raw: str) -> tuple[Path, Path]:
 
 
 def _require_secure_traversal(raw: str, kind: str, *, available: bool) -> None:
+    """Refuse unsupported no-follow traversal rather than silently return no matches."""
     if not available:
         raise SecureTraversalUnavailableError(
             f"Secure no-follow traversal is unavailable on this platform; cannot read {kind} "
@@ -199,6 +200,11 @@ def discover_file_records(
     *,
     respect_gitignore: bool = True,
 ) -> list[DiscoveredFile]:
+    """Resolve unique file inputs with anchors for subsequent no-follow reads.
+
+    Directory/glob discovery honors exclusions and skips internal symlink aliases.
+    Literal file inputs retain their narrower traversal requirements.
+    """
     found: dict[Path, DiscoveredFile] = {}
     for raw in inputs:
         has_magic = glob.has_magic(raw)

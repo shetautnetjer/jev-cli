@@ -437,3 +437,77 @@ def test_catalog_import_keeps_version_mismatch_and_closes_connections(
             db.execute("SELECT 1")
     with connect(db_path) as db:
         assert get_contract(db, "literal.find", "1").model == "jev-latest"
+
+
+@pytest.mark.parametrize("command", ["list", "show", "outcomes"])
+@pytest.mark.parametrize("deny_read", [False, True], ids=["success", "read-refused"])
+def test_catalog_read_commands_close_connection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str, deny_read: bool
+) -> None:
+    import sqlite3
+    from contextlib import closing
+
+    import jev_cli.catalog as catalog_module
+
+    db_path = tmp_path / "catalog.sqlite"
+    with closing(connect(db_path)) as db:
+        import_contract(db, DecisionContract.model_validate(_LITERAL_CONTRACT))
+    opened: list[sqlite3.Connection] = []
+
+    def tracked_connect(path: Path) -> sqlite3.Connection:
+        db = connect(path)
+        opened.append(db)
+        if deny_read:
+            db.set_authorizer(
+                lambda action, *_: (
+                    sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_SELECT else sqlite3.SQLITE_OK
+                )
+            )
+        return db
+
+    monkeypatch.setattr(catalog_module, "connect", tracked_connect)
+    arguments = {"list": [], "show": ["literal.find", "1"], "outcomes": ["run-1"]}
+    result = CliRunner().invoke(
+        app, ["catalog", command, *arguments[command], "--db", str(db_path)]
+    )
+    if deny_read:
+        assert result.exit_code != 0
+        assert isinstance(result.exception, sqlite3.DatabaseError)
+    else:
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.stdout)
+        if command == "list":
+            assert [row["contract_id"] for row in payload] == ["literal.find"]
+        elif command == "show":
+            assert payload["id"] == "literal.find"
+        else:
+            assert payload == []
+    assert len(opened) == 1
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        opened[0].execute("SELECT 1")
+
+
+def test_catalog_show_closes_connection_on_missing_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sqlite3
+
+    import jev_cli.catalog as catalog_module
+
+    opened: list[sqlite3.Connection] = []
+
+    def tracked_connect(path: Path) -> sqlite3.Connection:
+        db = connect(path)
+        opened.append(db)
+        return db
+
+    monkeypatch.setattr(catalog_module, "connect", tracked_connect)
+    result = CliRunner().invoke(
+        app,
+        ["catalog", "show", "absent", "1", "--db", str(tmp_path / "catalog.sqlite")],
+    )
+    _assert_clean_cli_error(result)
+    assert "Unknown contract ID/version" in result.output
+    assert len(opened) == 1
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        opened[0].execute("SELECT 1")

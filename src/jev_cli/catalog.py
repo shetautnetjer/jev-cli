@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS decisions (
 
 
 def connect(path: Path) -> sqlite3.Connection:
+    """Open and initialize a catalog; the caller owns closing the connection."""
     db = sqlite3.connect(path)
     db.row_factory = sqlite3.Row
     db.executescript(DDL)
@@ -123,6 +124,11 @@ def import_contract(
     scope: str = "general",
     source_ref: str | None = None,
 ) -> str:
+    """Import one immutable version and its questions under a writer reservation.
+
+    Matching content reuses its fingerprint; changed content requires a new version.
+    An existing caller transaction retains commit/rollback ownership.
+    """
     raw = contract.model_dump(mode="json", exclude_none=True)
     digest = sha256_json(raw)
     with _import_transaction(db):
@@ -166,6 +172,7 @@ def import_contract(
 
 
 def list_contracts(db: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Return contract metadata ordered by identity and version, without inference."""
     return [
         dict(row)
         for row in db.execute(
@@ -176,6 +183,7 @@ def list_contracts(db: sqlite3.Connection) -> list[dict[str, Any]]:
 
 
 def get_contract(db: sqlite3.Connection, contract_id: str, version: str) -> DecisionContract:
+    """Validate an exact stored contract, raising ValueError for an unknown identity."""
     row = db.execute(
         "SELECT contract_json FROM contracts WHERE contract_id=? AND version=?",
         (contract_id, version),
@@ -195,6 +203,11 @@ def record_outcome(
     provider_receipt_ref: str | None = None,
     effect_receipt_ref: str | None = None,
 ) -> None:
+    """Atomically retain caller-observed outcomes after validating receipt identity.
+
+    A retained decision must match the receipt, and existing outcomes are never
+    overwritten. The observation is a caller claim, not independent effect proof.
+    """
     if observed_result not in {"success", "failure", "unresolved", "superseded"}:
         raise ValueError("Invalid observed result")
     with db:
@@ -239,6 +252,7 @@ def record_outcome(
 
 
 def list_outcomes(db: sqlite3.Connection, run_id: str) -> list[dict[str, Any]]:
+    """Read recorded outcomes for one run in stable step/question order."""
     return [
         dict(row)
         for row in db.execute(
@@ -298,6 +312,7 @@ def run_contract(
 
 
 def list_decisions(db: sqlite3.Connection, run_id: str) -> list[dict[str, Any]]:
+    """Read every attempt for one run, decoding any retained receipt without inference."""
     result = []
     for row in db.execute(
         "SELECT * FROM decisions WHERE run_id=? ORDER BY created_at,step_id", (run_id,)
@@ -317,6 +332,11 @@ def observe_decision(
     observed_result: str,
     effect_receipt_ref: str | None = None,
 ) -> None:
+    """Record an observation for a completed decision without replacing prior evidence.
+
+    Success/failure claims require an effect reference, which this function does
+    not independently verify.
+    """
     row = db.execute(
         "SELECT status,receipt_json FROM decisions WHERE run_id=? AND step_id=?", (run_id, step_id)
     ).fetchone()
@@ -381,6 +401,7 @@ def _json_strings(node: Any) -> Iterator[str]:
 
 
 def _contract_contains(contract_json: str | None, text: str | None) -> int:
+    """Match case-folded decoded JSON text; missing or malformed input does not match."""
     if not contract_json or not text:
         return 0
     try:

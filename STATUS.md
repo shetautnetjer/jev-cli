@@ -1,5 +1,28 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Close remaining catalog read connections
+
+The final PR summary review identified three read commands that used SQLite's
+transaction context manager without closing its connection. `catalog list`,
+`show` and `outcomes` now explicitly close their owned handles after success or
+failure. Existing returned data, errors and transaction behavior remain intact.
+Seven real-SQLite controls cover all three success paths, denied SELECTs and the
+missing-contract diagnostic: the final test bytes fail seven times against
+`0b694404789b67aa483b53c09f103fdb4464f3b7`, then pass with the repair.
+
+Twenty-one concise docstrings explain changed production contracts and ownership;
+no test docstrings or historical qualification fixtures were rewritten. Stripping
+docstrings from the seven production files produces identical ASTs before/after
+that documentation pass, separate from the three connection fixes. This is local
+documentation evidence, not a claim that CodeRabbit's coverage warning passed.
+
+The final suite passes 134 tests with native local IPC for synthetic MCP servers;
+Ruff checks, formatting of 61 files and mypy over 22 source files pass. Independent
+review found no material issue. Swan refreshed the exact publication worktree:
+35 Python files, 1,008 symbols, zero stale/new files and verified `catalog_list`.
+Evidence is retained under `/tmp/jev-pr3-close-handles-20261107/` for SUPERAGENT
+publication. No live model call, installed client or service change occurred.
+
 ## 2026-11-07 — Bounded MCP adapter qualification
 
 The isolated `codex/jev-mcp-adapter-20261107` branch starts at

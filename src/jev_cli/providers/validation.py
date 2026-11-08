@@ -9,6 +9,7 @@ from jev_cli.models import DecisionContract, NormalizedAnswer, ProviderUsage
 
 
 def probability(value: Any) -> bool:
+    """Accept finite numeric probabilities in [0, 1], excluding booleans."""
     return type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 1
 
 
@@ -66,6 +67,7 @@ def normalize_answers(raw_answers: Any, contract: DecisionContract) -> dict[str,
 
 
 def normalize_usage(raw: Any) -> ProviderUsage | None:
+    """Accept absent usage or nonnegative integer token counters without coercion."""
     if raw is None:
         return None
     try:

@@ -29,6 +29,7 @@ class MCPConfig(BaseModel):
 
 
 def _safe_label(value: Any) -> str | None:
+    """Keep only bounded identifiers accepted by the receipt metadata format."""
     if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.:/-]{1,128}", value):
         return value
     return None
@@ -118,16 +119,19 @@ class MCPProvider:
     name = "mcp"
 
     def __init__(self, config: MCPConfig) -> None:
+        """Retain validated launch settings; defer subprocess startup until evaluation."""
         self.config = config
 
     @classmethod
     def from_file(cls, path: Path) -> MCPProvider:
+        """Load strict launch settings without exposing invalid file contents in errors."""
         try:
             return cls(MCPConfig.model_validate_json(path.read_text(encoding="utf-8")))
         except (OSError, ValueError):
             raise RuntimeError("Cannot read valid MCP config; see docs/INTEGRATIONS.md") from None
 
     def evaluate(self, contract: DecisionContract, state: StatePacket) -> ProviderResult:
+        """Run one bounded MCP evaluation and hide transport details from CLI errors."""
         try:
             return asyncio.run(self._evaluate(contract, state))
         except ImportError:
@@ -140,6 +144,11 @@ class MCPProvider:
             ) from None
 
     async def _evaluate(self, contract: DecisionContract, state: StatePacket) -> ProviderResult:
+        """Negotiate a fresh stdio session and validate its single evaluation receipt.
+
+        The configured wrapper owns credentials; the timeout covers startup and
+        tool calls. Requested model pins and returned route provenance must agree.
+        """
         from mcp import ClientSession, StdioServerParameters
         from mcp.client.stdio import stdio_client
 

@@ -50,6 +50,7 @@ err_console = Console(stderr=True)
 
 
 def _provider(name: str, mcp_config: Path | None = None) -> ProviderAdapter:
+    """Construct the selected adapter; only MCP requires explicit or environment config."""
     if name == "typesafe":
         return TypeSafeProvider()
     if name == "mock":
@@ -533,9 +534,11 @@ def catalog_list(
     db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
 ) -> None:
     """List stored contract identities, versions, and fingerprints."""
+    from contextlib import closing
+
     from jev_cli.catalog import connect, list_contracts
 
-    with connect(db) as store:
+    with closing(connect(db)) as store:
         typer.echo(dump_json(list_contracts(store)))
 
 
@@ -546,9 +549,11 @@ def catalog_show(
     db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
 ) -> None:
     """Show the imported contract, including its question and answer space."""
+    from contextlib import closing
+
     from jev_cli.catalog import connect, get_contract
 
-    with connect(db) as store:
+    with closing(connect(db)) as store:
         try:
             contract = get_contract(store, contract_id, version)
         except ValueError as exc:
@@ -627,9 +632,11 @@ def catalog_outcomes(
     db: Annotated[Path, typer.Option("--db")] = Path("jev-catalog.sqlite"),
 ) -> None:
     """Read exact stored answers and outcomes for one run."""
+    from contextlib import closing
+
     from jev_cli.catalog import connect, list_outcomes
 
-    with connect(db) as store:
+    with closing(connect(db)) as store:
         typer.echo(dump_json(list_outcomes(store, run_id)))
 
 
