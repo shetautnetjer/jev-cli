@@ -20,8 +20,11 @@ qualification packets retain the bytes and results exercised at that revision.
   lazy; valid MCP replay still needs no new configuration, while genuine
   initialization failures for selected providers remain durable failures.
 - The explicit-file filtering note concerns `--path-first` search only. In that
-  mode, directory/glob inputs use root-relative exclusions and explicit inputs
-  filter their canonical basename. Ordinary search does not apply this basename
+  mode, exclusions use each discovered file's scan root. A glob-matched directory
+  becomes its own root: `data/*` can select `data/credentials`, so a contained
+  `report.txt` is checked without the `credentials` parent component and can be
+  selected for semantic processing when enabled. Explicit file inputs filter
+  their canonical basename. Ordinary search does not apply this basename
   filter and can read an explicitly selected `.env` file. Checking every absolute
   ancestor would change selection of valid files inside hidden checkouts. The
   existing behavior is retained and has a directory-versus-literal regression.
@@ -30,6 +33,24 @@ qualification packets retain the bytes and results exercised at that revision.
 No command, parameter, contract field, receipt field or dependency was replaced.
 The two runtime changes are confined to hook-name validation and Rust's fallback
 identity comparison. No provider or installation configuration was changed.
+
+### Final publication-scanner follow-up
+
+[Review of `904b14f`](https://github.com/shetautnetjer/jev-cli/pull/4#pullrequestreview-5816606313)
+found that the publication scanner checked absolute path components. A checkout
+beneath `target` or `.venv` could therefore report success after scanning zero
+files. The scanner now applies its existing exclusions relative to the repository
+root. Internal build/environment trees remain excluded.
+
+The four cases in [the publication regression](../tests/test_publication.py)
+run the real scanner as a subprocess in disposable Git repositories. They check
+untracked synthetic findings beneath ordinary, `target` and `.venv` ancestors,
+plus retained internal exclusions with a nonzero scanned-file count. The prior
+scanner fails three cases and passes one; the repaired scanner passes all four.
+Run them with `python -m pytest -q tests/test_publication.py` after the development
+installation below. The full offline optional suite now passes **203 tests**.
+The runtime/package results and hashes below remain pinned to `9c4e078`: this
+follow-up changes only the publication script, its tests and documentation.
 
 ## Documentation and verification
 

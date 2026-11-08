@@ -1,5 +1,18 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Bound publication exclusions to the checkout
+
+Final review of `904b14f` found that the publication scanner skipped every file
+when an absolute checkout ancestor was named `target` or `.venv`. Exclusions now
+use paths relative to the repository root, preserving internal build exclusions.
+Four real scanner subprocess cases fail three times on the prior source and all
+pass after the one-line fix; the full offline optional suite passes 203 tests.
+The README and review follow-up clarify that a glob-matched directory becomes
+its own scan root. No Jev package, search behavior or dependency changed.
+Ruff, formatting and the publication scan pass; the exact Swan map was refreshed
+without changing trust. New evidence is in `/tmp/jev-pr4-final-scope-20261107/`;
+the earlier runtime qualification and package artifacts remain historical records.
+
 ## 2026-11-07 — Clarify final review documentation
 
 Review of `9c4e078` requested an explicit distinction between ordinary search and

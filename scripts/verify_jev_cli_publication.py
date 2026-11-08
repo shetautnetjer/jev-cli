@@ -57,7 +57,7 @@ def iter_files() -> list[Path]:
     for path in ROOT.rglob("*"):
         if not path.is_file():
             continue
-        if any(part in EXCLUDE_PARTS for part in path.parts):
+        if any(part in EXCLUDE_PARTS for part in path.relative_to(ROOT).parts):
             continue
         if (
             path.name == "uv.lock"

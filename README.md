@@ -122,8 +122,12 @@ jev search "invoice handler" ./src --path-first --path-limit 10
 This ranks names with local token overlap, **not** Blink's Jev Choice/walkers. It may miss behavior in opaque filenames; ordinary `jev search` remains the default. Output labels unverified `path-candidate` records separately from `source-chunk` hits. It calls no provider without `--semantic`; adding `--semantic --semantic-limit N` may transmit selected source to the configured provider and needs explicit egress/spend authorization. Search results are not persisted by `jev catalog` or independently verified behavior. See the [path ranking implementation](src/jev_cli/path_rank.py) and [API reconciliation record](docs/API-RECONCILIATION.md) for the retained behavior and qualification boundaries.
 
 With `--path-first`, path ranking filters hidden or sensitive components relative
-to the selected directory/glob root. For an explicitly selected file, this mode
-filters the canonical basename only; hidden parent directories do not override
+to each discovered file's scan root. A glob-matched directory becomes its own
+scan root: for example, `data/*` can select `data/credentials`, and its
+`report.txt` is then checked without the `credentials` parent component. Such a
+file can be selected for semantic processing when that mode is enabled. For an
+explicitly selected file, this mode filters the canonical basename only; hidden
+parent directories do not override
 that explicit selection. Ordinary search does not apply this basename filter and
 can read an explicitly selected `.env` file. These name filters are discovery
 rules, not a promise that arbitrary selected source contains no secrets.
