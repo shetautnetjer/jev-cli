@@ -23,9 +23,11 @@ Any future raw-state persistence must be explicit opt-in and clearly separated f
 
 ## Search
 
-Directory traversal follows explicit roots and configurable ignore rules. Directory scans reject file symlinks, require resolved candidates to remain inside the selected root, and reopen discovered files descriptor-relative with no-follow semantics for every path component.
+Directory traversal follows explicit roots and configurable ignore rules. Directory and glob scans reject file symlinks, retain root-relative provenance, require resolved candidates to remain inside the selected root, and reopen discovered files descriptor-relative with no-follow semantics from the filesystem root through every selected path component.
 
 Symlinked `.gitignore` files are ignored rather than followed. Glob-expanded file symlinks are rejected.
+
+If the host platform cannot provide the no-follow and descriptor-relative primitives required for that guarantee, protected discovery reads fail closed instead of silently degrading to weaker symlink handling.
 
 A caller may still explicitly select a literal symlink as a direct file input. That is treated as an intentional explicit path choice rather than implicit directory/glob traversal.
 

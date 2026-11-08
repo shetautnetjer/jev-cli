@@ -1,0 +1,95 @@
+{
+  "as_of": "2026-11-07T23:25:02.344481+00:00",
+  "base_commit": "55dbf5193465445028245408265cfcbdcc2df5a4",
+  "source_branch": "codex/catalog-mcp-execution",
+  "source_state": "uncommitted candidate; not an installed or published release",
+  "files": [
+    {
+      "path": "pyproject.toml",
+      "source_sha256": "051e955c8e0eeb42afa491fa27339d3f397e5dd966d4acfaf3ae5901af487cb3",
+      "imported_sha256": "051e955c8e0eeb42afa491fa27339d3f397e5dd966d4acfaf3ae5901af487cb3",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "uv.lock",
+      "source_sha256": "fa13bc73eb46647752618c06084751d3c7c524cc46aa5749578b31452471b0e2",
+      "imported_sha256": "fa13bc73eb46647752618c06084751d3c7c524cc46aa5749578b31452471b0e2",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/catalog.py",
+      "source_sha256": "926a2b55ac3b1273c466a5cb94fa15bbc4adeda962dc1e213630a962bab62f34",
+      "imported_sha256": "926a2b55ac3b1273c466a5cb94fa15bbc4adeda962dc1e213630a962bab62f34",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/engine.py",
+      "source_sha256": "70be9b80af79a00a54a5c7961ac86bdef9489f5dbb4fb21613bca2e94d113e2b",
+      "imported_sha256": "70be9b80af79a00a54a5c7961ac86bdef9489f5dbb4fb21613bca2e94d113e2b",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/models.py",
+      "source_sha256": "5bc20f50a6a94a2d0870d506b6c9566ec7bf5292e05c77c868cfa69112f98f9c",
+      "imported_sha256": "5bc20f50a6a94a2d0870d506b6c9566ec7bf5292e05c77c868cfa69112f98f9c",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/providers/mcp.py",
+      "source_sha256": "0489ad7bb03c68e23974c6b759ca6c327d16ebfa868cd6136d63309c2ca332a4",
+      "imported_sha256": "0489ad7bb03c68e23974c6b759ca6c327d16ebfa868cd6136d63309c2ca332a4",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/providers/validation.py",
+      "source_sha256": "645cfc8e9b8447f02da0633a2d3d7dea32f09e4c26e3d4bc33afb328e05df1d5",
+      "imported_sha256": "645cfc8e9b8447f02da0633a2d3d7dea32f09e4c26e3d4bc33afb328e05df1d5",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/providers/typesafe.py",
+      "source_sha256": "7c81017465dd984aaaf22b10fcf476418725d26ea3c8223cde5a42f267e22eb8",
+      "imported_sha256": "7c81017465dd984aaaf22b10fcf476418725d26ea3c8223cde5a42f267e22eb8",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "tests/test_mcp_provider.py",
+      "source_sha256": "5b96e92109581897783734cf7f91f3747229ccfa4802688cc296b01c169a68cf",
+      "imported_sha256": "5b96e92109581897783734cf7f91f3747229ccfa4802688cc296b01c169a68cf",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "tests/test_catalog_execution.py",
+      "source_sha256": "785c8cd657c620bc5d6d6e4ac586f0687e665ec0b2987c9d7f3e1f4b1f69cb49",
+      "imported_sha256": "785c8cd657c620bc5d6d6e4ac586f0687e665ec0b2987c9d7f3e1f4b1f69cb49",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "tests/test_provider.py",
+      "source_sha256": "b9dfb58fa17fe76980df9b8da8d1d63a72494c816750788916ae6465ac748ea8",
+      "imported_sha256": "b9dfb58fa17fe76980df9b8da8d1d63a72494c816750788916ae6465ac748ea8",
+      "mode": "exact candidate bytes"
+    },
+    {
+      "path": "src/jev_cli/cli.py",
+      "source_sha256": "d568e568232fc7ea75933d1be73bcea347584e63a6f23e7aae45c9cdb800e659",
+      "imported_sha256": "0371f80ac5c572a1f7b9459a007a2d9fe6e23a63ee3d6f4f575b7662fa7e1b3d",
+      "mode": "baseline plus exact candidate _provider/catalog_run/catalog_decisions/catalog_observe/catalog_find definitions and import os; excludes path ranking and hook command"
+    },
+    {
+      "path": "docs/INTEGRATIONS.md",
+      "source_sha256": "7fba8234665e5da821b5f166f892c6dd4f33f577c4e662beee9eab1d09b90a24",
+      "imported_sha256": "cbd89f1809a952018dc204be8ffa0872e0130dfac186c367fed2d7ed66b29cb3",
+      "mode": "baseline plus stored-question MCP/catalog section only; excludes Monty, Skills-rs and Pipelex additions"
+    }
+  ],
+  "exclusions": [
+    "hooks and lifecycle hooks",
+    "path-first search",
+    "Rust/Skills-rs",
+    "Pipelex",
+    "Monty",
+    "IDE metadata",
+    "private runtime/configuration"
+  ]
+}

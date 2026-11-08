@@ -61,6 +61,7 @@ def execute(
     state: StatePacket,
     provider: ProviderAdapter,
 ) -> DecisionReceipt:
+    """Evaluate once and bind the result to contract/state hashes and provider provenance."""
     result = provider.evaluate(contract, state)
     return DecisionReceipt(
         contract_id=contract.id,
@@ -74,5 +75,6 @@ def execute(
         answers=result.answers,
         usage=result.usage,
         provider_elapsed_ms=result.elapsed_ms,
+        provider_metadata=result.metadata,
         composition=compose(contract, result.answers),
     )

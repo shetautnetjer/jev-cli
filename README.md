@@ -123,6 +123,7 @@ The explicit limit makes recall/cost pruning visible instead of hiding a univers
 | `jev bench` | run frozen benchmark cases |
 | `jev cookbook` | list bundled recipes |
 | `jev doctor` | inspect provider/extras configuration without exposing secrets |
+| `jev catalog` | import/list/show versioned contracts and record/query observed outcomes in local SQLite |
 
 Graph execution and an MCP/HTTP server are intentionally deferred from V0.
 
@@ -177,6 +178,7 @@ BGE and GLiNER are optional helpers. They do not silently remove legal semantic 
 - [Agent Bootstrap — copy/paste setup prompt](docs/AGENT_BOOTSTRAP.md)
 - [Research → CLI Cross-check](docs/RESEARCH_CROSSCHECK.md)
 - [Informed Decision Packet](cookbook/informed-decision-packet.md)
+- [Question catalog and situated workflow loop — design candidate](docs/QUESTION_GRAPH.md)
 - [Decision Basis + Next Operator](cookbook/decision-basis-routing.md)
 - [Question Design Checklist](cookbook/question-design-checklist.md)
 

@@ -9,6 +9,17 @@ from pathlib import Path
 
 import pathspec
 
+SECURE_NOFOLLOW_AVAILABLE = (
+    hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY") and os.open in os.supports_dir_fd
+)
+
+FILE_NOFOLLOW_AVAILABLE = hasattr(os, "O_NOFOLLOW")
+
+
+class SecureTraversalUnavailableError(RuntimeError):
+    """The platform lacks a primitive needed to read the selected input safely."""
+
+
 COMMON_IGNORES = {
     ".git",
     ".hg",
@@ -46,10 +57,12 @@ class DiscoveredFile:
 
 def _read_regular_bytes_no_follow(path: Path, *, max_bytes: int) -> bytes | None:
     """Read one regular file without following a final-component symlink."""
+    if not FILE_NOFOLLOW_AVAILABLE:
+        return None
     try:
         if path.is_symlink():
             return None
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
         fd = os.open(path, flags)
         try:
             info = os.fstat(fd)
@@ -66,6 +79,33 @@ def _read_regular_bytes_no_follow(path: Path, *, max_bytes: int) -> bytes | None
         return None
 
 
+def _open_absolute_directory_no_follow(path: Path) -> tuple[int, list[int]]:
+    """Reopen a previously canonicalized absolute directory path without following symlinks."""
+    if not SECURE_NOFOLLOW_AVAILABLE:
+        raise OSError("Secure no-follow directory traversal is unavailable on this platform")
+    if not path.is_absolute():
+        raise OSError("Directory path must be absolute")
+    canonical = path
+
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    opened: list[int] = []
+    try:
+        current_fd = os.open(canonical.anchor or os.sep, directory_flags)
+        opened.append(current_fd)
+        for part in canonical.parts[1:]:
+            next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+            opened.append(next_fd)
+            current_fd = next_fd
+        return current_fd, opened
+    except (OSError, NotImplementedError):
+        for fd in reversed(opened):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        raise
+
+
 def _read_relative_regular_bytes_no_follow(
     root: Path,
     relative_path: Path,
@@ -77,11 +117,10 @@ def _read_relative_regular_bytes_no_follow(
         return None
 
     directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-    file_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    file_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     opened: list[int] = []
     try:
-        current_fd = os.open(root, directory_flags)
-        opened.append(current_fd)
+        current_fd, opened = _open_absolute_directory_no_follow(root)
         for part in relative_path.parts[:-1]:
             next_fd = os.open(part, directory_flags, dir_fd=current_fd)
             opened.append(next_fd)
@@ -132,25 +171,94 @@ def _allowed(path: Path, root: Path, spec: pathspec.PathSpec | None) -> bool:
     return spec is None or not spec.match_file(rel.as_posix())
 
 
+def _glob_roots(raw: str) -> tuple[Path, Path]:
+    """Return the (lexical, canonical) root: the literal prefix before the first magic part.
+
+    The lexical root keeps symlinked prefix components, so it is the right base for
+    paths as glob.glob spells them; the canonical root is where reads are anchored.
+    """
+    parts = Path(raw).parts
+    first_magic = next(
+        (index for index, part in enumerate(parts) if glob.has_magic(part)),
+        len(parts),
+    )
+    prefix = Path(*parts[:first_magic]) if first_magic else Path.cwd()
+    return Path(os.path.abspath(prefix)), prefix.resolve()
+
+
+def _require_secure_traversal(raw: str, kind: str, *, available: bool) -> None:
+    """Refuse unsupported no-follow traversal rather than silently return no matches."""
+    if not available:
+        raise SecureTraversalUnavailableError(
+            f"Secure no-follow traversal is unavailable on this platform; cannot read {kind} "
+            f"input {raw!r} without following symlinks"
+        )
+
+
 def discover_file_records(
     inputs: Iterable[str],
     *,
     respect_gitignore: bool = True,
 ) -> list[DiscoveredFile]:
+    """Resolve unique file inputs with anchors for subsequent no-follow reads.
+
+    Directory/glob discovery honors exclusions and skips internal symlink aliases.
+    Literal file inputs retain their narrower traversal requirements.
+    """
     found: dict[Path, DiscoveredFile] = {}
     for raw in inputs:
         has_magic = glob.has_magic(raw)
+        if has_magic:
+            # Fail loudly: an empty result would be indistinguishable from "no matches".
+            _require_secure_traversal(raw, "glob", available=SECURE_NOFOLLOW_AVAILABLE)
+        lexical_root, glob_root = _glob_roots(raw) if has_magic else (None, None)
+        glob_spec = (
+            _gitignore_spec(glob_root)
+            if has_magic and respect_gitignore and glob_root is not None
+            else None
+        )
         expanded = [Path(p) for p in glob.glob(raw, recursive=True)] if has_magic else [Path(raw)]
         for item in expanded:
-            if item.is_file():
-                if has_magic and item.is_symlink():
+            glob_lexical: Path | None = None
+            glob_resolved: Path | None = None
+            glob_relative: Path | None = None
+            if has_magic:
+                if item.is_symlink() or glob_root is None or lexical_root is None:
                     continue
+                # os.path.abspath normalizes "..", which Path.absolute() leaves in place.
+                glob_lexical = Path(os.path.abspath(item))
+                glob_resolved = item.resolve()
+                if not _allowed(glob_lexical, lexical_root, glob_spec):
+                    continue
+                if not _allowed(glob_resolved, glob_root, glob_spec):
+                    continue
+                glob_relative = glob_lexical.relative_to(lexical_root)
+                # A symlinked component below the root makes the lexical spelling an alias
+                # of another candidate and unreadable under no-follow reads: skip it.
+                if glob_relative.parts != glob_resolved.relative_to(glob_root).parts:
+                    continue
+
+            if item.is_file():
+                if has_magic:
+                    assert glob_root is not None
+                    assert glob_resolved is not None
+                    assert glob_relative is not None
+                    found[glob_resolved] = DiscoveredFile(
+                        path=glob_resolved,
+                        root=glob_root,
+                        relative_path=glob_relative,
+                    )
+                    continue
+                _require_secure_traversal(raw, "file", available=FILE_NOFOLLOW_AVAILABLE)
                 resolved = item.resolve()
                 found[resolved] = DiscoveredFile(path=resolved)
                 continue
+
             if not item.is_dir():
                 continue
-            root = item.resolve()
+            _require_secure_traversal(raw, "directory", available=SECURE_NOFOLLOW_AVAILABLE)
+            root = glob_resolved if has_magic else item.resolve()
+            assert root is not None
             spec = _gitignore_spec(root) if respect_gitignore else None
             for candidate in root.rglob("*"):
                 # Directory scans never follow file symlinks. A caller may still
