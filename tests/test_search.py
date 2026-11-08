@@ -224,6 +224,144 @@ def test_protected_discovery_read_fails_closed_without_secure_primitives(
     assert read_discovered_text(records[0]) is None
 
 
+def test_directory_and_glob_discovery_fail_explicitly_without_secure_primitives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "a.txt").write_text("safe", encoding="utf-8")
+    monkeypatch.setattr(discovery, "SECURE_NOFOLLOW_AVAILABLE", False)
+
+    with pytest.raises(discovery.SecureTraversalUnavailableError, match="unavailable"):
+        discover_file_records([str(root)])
+    with pytest.raises(discovery.SecureTraversalUnavailableError, match="unavailable"):
+        discover_file_records([str(root / "*.txt")])
+    # Even a glob without matches is not reported as an ordinary empty result.
+    with pytest.raises(discovery.SecureTraversalUnavailableError):
+        discover_file_records([str(root / "*.nomatch")])
+
+
+def test_explicit_file_discovery_still_works_without_directory_primitives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target.txt"
+    target.write_text("explicit input", encoding="utf-8")
+    link = tmp_path / "link.txt"
+    link.symlink_to(target)
+    monkeypatch.setattr(discovery, "SECURE_NOFOLLOW_AVAILABLE", False)
+
+    records = discover_file_records([str(target), str(link), str(tmp_path / "absent.txt")])
+
+    assert [record.path for record in records] == [target.resolve()]
+    assert read_discovered_text(records[0]) == "explicit input"
+
+
+def test_explicit_file_discovery_fails_explicitly_without_file_nofollow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target.txt"
+    target.write_text("explicit input", encoding="utf-8")
+    monkeypatch.setattr(discovery, "FILE_NOFOLLOW_AVAILABLE", False)
+
+    with pytest.raises(discovery.SecureTraversalUnavailableError):
+        discover_file_records([str(target)])
+    # A path that is not a file stays an ordinary non-match.
+    assert discover_file_records([str(tmp_path / "absent.txt")]) == []
+
+
+def test_search_cli_reports_unavailable_secure_traversal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typer.testing import CliRunner
+
+    from jev_cli.cli import app
+
+    (tmp_path / "a.txt").write_text("decision", encoding="utf-8")
+    monkeypatch.setattr(discovery, "SECURE_NOFOLLOW_AVAILABLE", False)
+
+    result = CliRunner().invoke(app, ["search", "decision", str(tmp_path)])
+
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, SystemExit), repr(result.exception)
+    assert "unavailable" in result.output
+    assert "files_discovered" not in result.output
+
+
+def test_glob_with_parent_relative_prefix_finds_siblings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    work = tmp_path / "work"
+    sibling = tmp_path / "sibling"
+    work.mkdir()
+    sibling.mkdir()
+    (sibling / "a.txt").write_text("sibling text", encoding="utf-8")
+    monkeypatch.chdir(work)
+
+    records = discover_file_records(["../sibling/*.txt"])
+
+    assert [record.path for record in records] == [(sibling / "a.txt").resolve()]
+    assert records[0].root == sibling.resolve()
+    assert records[0].relative_path == Path("a.txt")
+    assert read_discovered_text(records[0]) == "sibling text"
+
+
+def test_glob_with_symlinked_prefix_finds_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "nested").mkdir()
+    (real / "nested" / "b.txt").write_text("nested text", encoding="utf-8")
+    (real / "a.txt").write_text("top text", encoding="utf-8")
+    (tmp_path / "link").symlink_to(real, target_is_directory=True)
+
+    absolute = discover_file_records([str(tmp_path / "link" / "**" / "*.txt")])
+    monkeypatch.chdir(tmp_path)
+    relative = discover_file_records(["link/*.txt"])
+
+    assert [record.path for record in absolute] == [
+        (real / "a.txt").resolve(),
+        (real / "nested" / "b.txt").resolve(),
+    ]
+    assert {record.root for record in absolute} == {real.resolve()}
+    assert [record.relative_path for record in absolute] == [Path("a.txt"), Path("nested/b.txt")]
+    assert [read_discovered_text(record) for record in absolute] == ["top text", "nested text"]
+    assert [record.path for record in relative] == [(real / "a.txt").resolve()]
+    assert read_discovered_text(relative[0]) == "top text"
+
+
+@pytest.mark.parametrize("alias_first", [True, False])
+def test_glob_internal_symlink_alias_cannot_replace_canonical_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, alias_first: bool
+) -> None:
+    root = tmp_path / "repo"
+    real_dir = root / "real_dir"
+    real_dir.mkdir(parents=True)
+    candidate = real_dir / "f.txt"
+    candidate.write_text("canonical text", encoding="utf-8")
+    (root / "alias").symlink_to(real_dir, target_is_directory=True)
+    ordered = [str(root / "alias" / "f.txt"), str(candidate)]
+    if not alias_first:
+        ordered.reverse()
+    monkeypatch.setattr(discovery.glob, "glob", lambda raw, recursive=True: list(ordered))
+
+    records = discover_file_records([str(root / "*" / "f.txt")])
+
+    assert [record.path for record in records] == [candidate.resolve()]
+    assert records[0].relative_path == Path("real_dir/f.txt")
+    assert read_discovered_text(records[0]) == "canonical text"
+
+
+def test_glob_matching_only_an_internal_symlink_alias_is_rejected(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    real_dir = root / "real_dir"
+    real_dir.mkdir(parents=True)
+    (real_dir / "f.txt").write_text("canonical text", encoding="utf-8")
+    (root / "alias").symlink_to(real_dir, target_is_directory=True)
+
+    assert discover_file_records([str(root / "a*" / "f.txt")]) == []
+
+
 def test_lexical_search_ranks_matching_chunk_first(tmp_path: Path) -> None:
     a = tmp_path / "a.txt"
     b = tmp_path / "b.txt"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -321,12 +322,43 @@ def find_contracts(
     """Literal, case-insensitive discovery with no implicit top-k pruning."""
     if not text.strip():
         raise ValueError("Search text must not be empty")
+    # contract_json is stored as escaped JSON (non-ASCII as \uXXXX, quotes and
+    # newlines backslash-escaped), so a raw substring test cannot match literal
+    # user text. Compare against the decoded strings instead; stored rows and
+    # fingerprints are untouched, which also covers rows written by earlier releases.
+    db.create_function("jev_contract_contains", 2, _contract_contains, deterministic=True)
     return [
         dict(row)
         for row in db.execute(
             "SELECT contract_id,version,fingerprint,scope,source_ref,status FROM contracts "
-            "WHERE (? IS NULL OR scope=?) AND instr(lower(contract_json),lower(?)) > 0 "
+            "WHERE (? IS NULL OR scope=?) AND jev_contract_contains(contract_json, ?) "
             "ORDER BY contract_id,version",
             (scope, scope, text),
         )
     ]
+
+
+def _json_strings(node: Any) -> Iterator[str]:
+    """Yield every decoded key, string and scalar rendering in a JSON value."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield str(key)
+            yield from _json_strings(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _json_strings(value)
+    elif isinstance(node, str):
+        yield node
+    elif node is not None:
+        yield json.dumps(node)
+
+
+def _contract_contains(contract_json: str | None, text: str | None) -> int:
+    if not contract_json or not text:
+        return 0
+    try:
+        decoded = json.loads(contract_json)
+    except ValueError:
+        return 0
+    needle = text.casefold()
+    return int(any(needle in value.casefold() for value in _json_strings(decoded)))

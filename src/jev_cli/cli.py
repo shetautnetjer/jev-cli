@@ -9,10 +9,16 @@ from typing import Annotated, Any
 import typer
 import yaml
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from jev_cli import __version__
-from jev_cli.discovery import chunk_text, discover_file_records, read_discovered_text
+from jev_cli.discovery import (
+    SecureTraversalUnavailableError,
+    chunk_text,
+    discover_file_records,
+    read_discovered_text,
+)
 from jev_cli.engine import execute
 from jev_cli.io import dump_json, load_contract, state_from_source
 from jev_cli.models import (
@@ -250,7 +256,12 @@ def search(
     gliner_label: Annotated[list[str] | None, typer.Option("--gliner-label")] = None,
 ) -> None:
     """Recall and rank text chunks; optionally ask Jev to judge an explicit candidate pool."""
-    files = discover_file_records(inputs, respect_gitignore=not no_gitignore)
+    try:
+        files = discover_file_records(inputs, respect_gitignore=not no_gitignore)
+    except SecureTraversalUnavailableError as exc:
+        # The message quotes the user's path, which may contain "[" markup characters.
+        err_console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from None
     chunks = []
     for discovered in files:
         text = read_discovered_text(discovered)
@@ -528,10 +539,30 @@ def catalog_record(
     effect_receipt_ref: Annotated[str | None, typer.Option("--effect-ref")] = None,
 ) -> None:
     """Record a Jev answer with a separately observed outcome; no effects are executed."""
+    import sqlite3
+    from contextlib import closing
+
+    from pydantic import ValidationError
+
     from jev_cli.catalog import connect, record_outcome
 
-    receipt = DecisionReceipt.model_validate_json(receipt_file.read_text(encoding="utf-8"))
-    with connect(db) as store:
+    # Never echo parser or validation text here: it quotes the receipt's contents.
+    try:
+        raw_receipt = receipt_file.read_text(encoding="utf-8")
+    except OSError:
+        raise typer.BadParameter(f"Receipt file cannot be read: {receipt_file}") from None
+    except UnicodeDecodeError:
+        raise typer.BadParameter("Receipt file is not valid UTF-8 text") from None
+    try:
+        receipt = DecisionReceipt.model_validate_json(raw_receipt)
+    except ValidationError:
+        raise typer.BadParameter("Receipt file is not a valid Jev decision receipt") from None
+
+    try:
+        store = connect(db)
+    except sqlite3.Error:
+        raise typer.BadParameter(f"Catalog database cannot be opened: {db}") from None
+    with closing(store):
         try:
             record_outcome(
                 store,
@@ -542,8 +573,24 @@ def catalog_record(
                 provider_receipt_ref=str(receipt_file),
                 effect_receipt_ref=effect_receipt_ref,
             )
+        except ValidationError:
+            # A retained decision row failed validation; its text would quote stored receipt data.
+            raise typer.BadParameter("Retained decision receipt is not valid") from None
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from None
+        except sqlite3.IntegrityError as exc:
+            code = getattr(exc, "sqlite_errorname", None)
+            if code == "SQLITE_CONSTRAINT_FOREIGNKEY":
+                message = "Receipt names a question that is not in the imported contract"
+            elif code in {"SQLITE_CONSTRAINT_UNIQUE", "SQLITE_CONSTRAINT_PRIMARYKEY"}:
+                message = "Outcome already recorded; existing evidence was not overwritten"
+            else:
+                message = "Outcome violates a catalog constraint; nothing was recorded"
+            raise typer.BadParameter(message) from None
+        except sqlite3.Error:
+            raise typer.BadParameter(
+                "Catalog database operation failed; inspect the run/step before retrying"
+            ) from None
     typer.echo("recorded")
 
 

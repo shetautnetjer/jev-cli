@@ -135,3 +135,29 @@ and resolved the known catalog symbol. The independent pyright limitation above
 remains. The separate follow-up evidence is under
 `/tmp/jev-dependency-review-20261107/`; earlier qualification packets remain
 unchanged. Remote review and merge are handled separately by SUPERAGENT.
+
+## 2026-11-07 — Resolve PR #3 review findings
+
+Native Sonnet under the existing Claude Max login repaired four verified review
+findings in an isolated worktree. Catalog discovery now searches decoded literal
+text (including already escaped Unicode rows) without changing fingerprints or
+stored bytes. Receipt recording reports malformed input and constraint failures
+without quoting receipt contents and closes its connection. Directory/glob search
+reports unavailable no-follow primitives; separate lexical/canonical glob roots
+preserve ../ and symlinked prefixes while rejecting internal aliases.
+
+Independent review additionally reproduced a real post-connect SQLite write
+refusal. A fixed diagnostic now handles remaining database errors without
+claiming an uncertain write did not commit. Known constraint messages use native
+SQLite error names. Red-first tests cover each repair, including a query-only
+SQLite connection. All 102 offline tests, Ruff lint/format and mypy pass in the
+locked development environment with native local IPC. Platform-absence tests
+are simulated on Linux; Windows and real disk-corruption recovery are unqualified.
+
+The native worker completed 52 of 80 turns; its receipt verifies first-party
+claude.ai Max authentication with no API/provider override. Parent verification
+and the SQLite follow-up remain distinct from the original worker result.
+SUPERAGENT retains native receipts, frozen red/green evidence, source hashes and
+independent review. No live Jev provider, runtime defaults or original dirty
+checkout changed. The current Swan map was refreshed for the isolated review
+worktree; publication-map refresh follows integration.

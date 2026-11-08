@@ -13,6 +13,13 @@ SECURE_NOFOLLOW_AVAILABLE = (
     hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY") and os.open in os.supports_dir_fd
 )
 
+FILE_NOFOLLOW_AVAILABLE = hasattr(os, "O_NOFOLLOW")
+
+
+class SecureTraversalUnavailableError(RuntimeError):
+    """The platform lacks a primitive needed to read the selected input safely."""
+
+
 COMMON_IGNORES = {
     ".git",
     ".hg",
@@ -50,7 +57,7 @@ class DiscoveredFile:
 
 def _read_regular_bytes_no_follow(path: Path, *, max_bytes: int) -> bytes | None:
     """Read one regular file without following a final-component symlink."""
-    if not hasattr(os, "O_NOFOLLOW"):
+    if not FILE_NOFOLLOW_AVAILABLE:
         return None
     try:
         if path.is_symlink():
@@ -164,21 +171,27 @@ def _allowed(path: Path, root: Path, spec: pathspec.PathSpec | None) -> bool:
     return spec is None or not spec.match_file(rel.as_posix())
 
 
-def _glob_root(raw: str) -> Path:
-    pattern = Path(raw)
-    parts = pattern.parts
+def _glob_roots(raw: str) -> tuple[Path, Path]:
+    """Return the (lexical, canonical) root: the literal prefix before the first magic part.
+
+    The lexical root keeps symlinked prefix components, so it is the right base for
+    paths as glob.glob spells them; the canonical root is where reads are anchored.
+    """
+    parts = Path(raw).parts
     first_magic = next(
         (index for index, part in enumerate(parts) if glob.has_magic(part)),
         len(parts),
     )
-    if first_magic == 0:
-        return Path.cwd().resolve()
-    root = Path(*parts[:first_magic])
-    if not root.is_absolute():
-        root = (Path.cwd() / root).resolve()
-    else:
-        root = root.resolve()
-    return root
+    prefix = Path(*parts[:first_magic]) if first_magic else Path.cwd()
+    return Path(os.path.abspath(prefix)), prefix.resolve()
+
+
+def _require_secure_traversal(raw: str, kind: str, *, available: bool) -> None:
+    if not available:
+        raise SecureTraversalUnavailableError(
+            f"Secure no-follow traversal is unavailable on this platform; cannot read {kind} "
+            f"input {raw!r} without following symlinks"
+        )
 
 
 def discover_file_records(
@@ -189,7 +202,10 @@ def discover_file_records(
     found: dict[Path, DiscoveredFile] = {}
     for raw in inputs:
         has_magic = glob.has_magic(raw)
-        glob_root = _glob_root(raw) if has_magic else None
+        if has_magic:
+            # Fail loudly: an empty result would be indistinguishable from "no matches".
+            _require_secure_traversal(raw, "glob", available=SECURE_NOFOLLOW_AVAILABLE)
+        lexical_root, glob_root = _glob_roots(raw) if has_magic else (None, None)
         glob_spec = (
             _gitignore_spec(glob_root)
             if has_magic and respect_gitignore and glob_root is not None
@@ -199,35 +215,42 @@ def discover_file_records(
         for item in expanded:
             glob_lexical: Path | None = None
             glob_resolved: Path | None = None
+            glob_relative: Path | None = None
             if has_magic:
-                if item.is_symlink() or glob_root is None:
+                if item.is_symlink() or glob_root is None or lexical_root is None:
                     continue
-                glob_lexical = item if item.is_absolute() else (Path.cwd() / item)
-                glob_lexical = glob_lexical.absolute()
+                # os.path.abspath normalizes "..", which Path.absolute() leaves in place.
+                glob_lexical = Path(os.path.abspath(item))
                 glob_resolved = item.resolve()
-                if not _allowed(glob_lexical, glob_root, glob_spec):
+                if not _allowed(glob_lexical, lexical_root, glob_spec):
                     continue
                 if not _allowed(glob_resolved, glob_root, glob_spec):
+                    continue
+                glob_relative = glob_lexical.relative_to(lexical_root)
+                # A symlinked component below the root makes the lexical spelling an alias
+                # of another candidate and unreadable under no-follow reads: skip it.
+                if glob_relative.parts != glob_resolved.relative_to(glob_root).parts:
                     continue
 
             if item.is_file():
                 if has_magic:
                     assert glob_root is not None
-                    assert glob_lexical is not None
                     assert glob_resolved is not None
-                    relative_path = glob_lexical.relative_to(glob_root)
+                    assert glob_relative is not None
                     found[glob_resolved] = DiscoveredFile(
                         path=glob_resolved,
                         root=glob_root,
-                        relative_path=relative_path,
+                        relative_path=glob_relative,
                     )
                     continue
+                _require_secure_traversal(raw, "file", available=FILE_NOFOLLOW_AVAILABLE)
                 resolved = item.resolve()
                 found[resolved] = DiscoveredFile(path=resolved)
                 continue
 
             if not item.is_dir():
                 continue
+            _require_secure_traversal(raw, "directory", available=SECURE_NOFOLLOW_AVAILABLE)
             root = glob_resolved if has_magic else item.resolve()
             assert root is not None
             spec = _gitignore_spec(root) if respect_gitignore else None
