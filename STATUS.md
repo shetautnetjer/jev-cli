@@ -1,5 +1,14 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Clarify final review documentation
+
+Review of `9c4e078` requested an explicit distinction between ordinary search and
+the `--path-first` basename filter. The README and review follow-up now state it,
+and the follow-up links exact public tests/CI and portable reproduction commands.
+Actual remote docstring coverage is 51.52% across 66 functions, below the advisory
+80% threshold; it is recorded as a remaining warning. This follow-up changes only
+Markdown documentation and preserves all executable source, tests and artifacts.
+
 ## 2026-11-07 — Address PR #4 review findings
 
 Following `017c490`, Rust replay now accepts the same versioned fallback labels
