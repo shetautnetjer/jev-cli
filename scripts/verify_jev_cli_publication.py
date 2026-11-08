@@ -52,6 +52,7 @@ TEXT_SUFFIXES = {
 
 
 def iter_files() -> list[Path]:
+    """Select public text/config candidates while excluding environment and build trees."""
     result: list[Path] = []
     for path in ROOT.rglob("*"):
         if not path.is_file():
@@ -68,6 +69,7 @@ def iter_files() -> list[Path]:
 
 
 def scan_text(label: str, text: str, where: str) -> list[str]:
+    """Report forbidden patterns by category and location without returning matched contents."""
     failures: list[str] = []
     for name, pattern in SECRET_PATTERNS.items():
         if pattern.search(text):
@@ -82,6 +84,7 @@ def scan_text(label: str, text: str, where: str) -> list[str]:
 
 
 def scan_worktree() -> list[str]:
+    """Inspect selected UTF-8 worktree files, skipping undecodable binary candidates."""
     failures: list[str] = []
     for path in iter_files():
         try:
@@ -93,6 +96,7 @@ def scan_worktree() -> list[str]:
 
 
 def scan_history() -> list[str]:
+    """Inspect patch history across refs and report history-read failures when applicable."""
     if not (ROOT / ".git").exists():
         return []
     check = subprocess.run(
@@ -116,6 +120,7 @@ def scan_history() -> list[str]:
 
 
 def main() -> int:
+    """Fail publication on either worktree or history findings and summarize locations."""
     failures = scan_worktree() + scan_history()
     if failures:
         print("PUBLICATION GATE: FAIL")

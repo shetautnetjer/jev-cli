@@ -25,7 +25,11 @@ SENSITIVE_SUFFIXES = (".pem", ".key", ".p12", ".pfx")
 
 
 def rank_paths(query: str, files: list[DiscoveredFile]) -> list[tuple[DiscoveredFile, float]]:
-    """Rank eligible file names by token overlap; use stable path order for ties."""
+    """Rank eligible names; filter relative components or an explicit file's basename.
+
+    Literal inputs keep discovery's explicit-selection semantics: an enclosing
+    hidden directory does not exclude a file the caller selected directly.
+    """
     words = set(re.findall(r"[a-z0-9]+", query.lower()))
     ranked = []
     for file in files:

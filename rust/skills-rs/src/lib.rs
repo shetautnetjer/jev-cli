@@ -385,7 +385,12 @@ fn validate_provider(receipt: &Object, contract: &Object) -> Checked<()> {
                 // The normalized receipt does not retain negotiated capability details.
                 // Require its explicit fallback identity; never reinterpret it as the pinned primary.
                 let service = string(metadata, "service_provider")?;
-                require(!service.is_empty() && requested == resolved && requested != "jev-latest", "Ambiguous MCP fallback identity")?;
+                require(
+                    !service.is_empty()
+                        && (requested == resolved || resolved.starts_with(&format!("{requested}-")))
+                        && requested != "jev-latest",
+                    "Ambiguous MCP fallback identity",
+                )?;
             } else {
                 require(requested == resolved && (model == "jev-latest" || resolved == model), "MCP primary model mismatch")?;
             }

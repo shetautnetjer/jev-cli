@@ -19,6 +19,7 @@ SKILL = Path(__file__).resolve().parents[1] / "integrations" / "pipelex"
 
 
 def invoke(*args):
+    """Run the explicitly selected offline binary and parse its single JSON result."""
     result = subprocess.run(
         [BINARY, *map(str, args)], text=True, capture_output=True, timeout=10, check=False
     )
@@ -26,6 +27,7 @@ def invoke(*args):
 
 
 def fixture_packet(value=0.95, default="needs_evidence", state=None):
+    """Produce Python-owned typed receipts with configurable composition and state hashing."""
     contract = DecisionContract(
         id="test.rust-parity",
         version="1",
@@ -63,6 +65,7 @@ def fixture_packet(value=0.95, default="needs_evidence", state=None):
 
 
 def write_inputs(tmp_path, contract, state, receipt):
+    """Serialize contract, state and receipt independently for cross-language replay."""
     values = [
         contract.model_dump(mode="json", exclude_none=True),
         state.data,
@@ -76,6 +79,7 @@ def write_inputs(tmp_path, contract, state, receipt):
 
 @pytest.fixture
 def projection(tmp_path):
+    """Generate a fresh projection from the pinned method source for each replay fixture."""
     path = tmp_path / "projection.json"
     result, value = invoke("project", SKILL, "--out", path)
     assert result.returncode == 0, result.stdout
@@ -92,6 +96,7 @@ def projection(tmp_path):
     ],
 )
 def test_rust_replay_matches_python_receipt(tmp_path, projection, probability, default, expected):
+    """Verified Rust replay preserves Python answers and recomputes routes without inference."""
     contract, state, receipt = fixture_packet(probability, default)
     paths = write_inputs(tmp_path, contract, state, receipt)
     result, value = invoke("replay", projection, *paths, "--skill-dir", SKILL)
@@ -105,6 +110,7 @@ def test_rust_replay_matches_python_receipt(tmp_path, projection, probability, d
 
 @pytest.mark.parametrize("number", [0.0000001, 0.00001, 0.0001, 1e15, 1e16, 1e20, -0.0, 1.0])
 def test_canonical_state_hash_matches_python_for_unicode_and_numbers(tmp_path, projection, number):
+    """Unicode and numeric formatting must produce identical canonical state hashes."""
     contract, state, receipt = fixture_packet(state={"résumé": "Ma’at 🧠", "number": number})
     paths = write_inputs(tmp_path, contract, state, receipt)
     result, value = invoke("replay", projection, *paths)
@@ -115,6 +121,7 @@ def test_canonical_state_hash_matches_python_for_unicode_and_numbers(tmp_path, p
 
 @pytest.mark.parametrize("fault", ["state", "contract", "composition", "missing", "range", "type"])
 def test_replay_rejects_mismatches_without_echoing_source(tmp_path, projection, fault):
+    """Tampered state, identity, answers or composition fail without exposing source markers."""
     contract, state, receipt = fixture_packet()
     paths = write_inputs(tmp_path, contract, state, receipt)
     record = receipt.model_dump(mode="json")
@@ -140,6 +147,7 @@ def test_replay_rejects_mismatches_without_echoing_source(tmp_path, projection, 
 
 
 def test_projection_is_deterministic_and_does_not_overwrite(tmp_path, projection):
+    """Repeated projection is stable and refuses replacement without leaving temporary artifacts."""
     before = projection.read_bytes()
     first = json.loads(before)
     result, second = invoke("project", SKILL)
@@ -152,6 +160,7 @@ def test_projection_is_deterministic_and_does_not_overwrite(tmp_path, projection
 
 
 def test_projector_rejects_python_drift_and_unsupported_methods(tmp_path):
+    """Changed adapter bytes or unsupported method nodes cannot produce an accepted projection."""
     folder = tmp_path / "skill"
     shutil.copytree(SKILL, folder)
     adapter = folder / "jev_method.py"
@@ -169,6 +178,7 @@ def test_projector_rejects_python_drift_and_unsupported_methods(tmp_path):
 
 
 def test_verify_detects_source_or_artifact_drift(tmp_path, projection):
+    """Verification checks both source hashes and the projection contents against alteration."""
     folder = tmp_path / "skill"
     shutil.copytree(SKILL, folder)
     guide = folder / "SKILL.md"
@@ -184,6 +194,7 @@ def test_verify_detects_source_or_artifact_drift(tmp_path, projection):
 
 
 def test_cli_rejects_duplicate_receipt_keys(tmp_path, projection):
+    """Ambiguous duplicate JSON fields are rejected without echoing their supplied values."""
     contract, state, receipt = fixture_packet()
     paths = write_inputs(tmp_path, contract, state, receipt)
     raw = paths[2].read_text()
@@ -195,6 +206,7 @@ def test_cli_rejects_duplicate_receipt_keys(tmp_path, projection):
 
 
 def test_replay_accepts_complete_32_question_receipt(tmp_path, projection):
+    """The full supported batch keeps all typed answers and its Python-computed composition."""
     questions = {
         f"q{i}": {"type": "noul", "instructions": f"Is fixture fact {i} supported?"}
         for i in range(32)
@@ -218,6 +230,7 @@ def test_replay_accepts_complete_32_question_receipt(tmp_path, projection):
 
 @pytest.mark.parametrize("operator,operand", [("eq", True), ("gte", True), ("lte", 1)])
 def test_numeric_and_boolean_composition_matches_python(tmp_path, projection, operator, operand):
+    """Rust comparisons preserve Python numeric/boolean rule semantics for represented operands."""
     contract, state, _ = fixture_packet(value=1)
     rule = contract.composition.rules[0]
     rule.operator = operator
@@ -226,3 +239,83 @@ def test_numeric_and_boolean_composition_matches_python(tmp_path, projection, op
     result, value = invoke("replay", projection, *write_inputs(tmp_path, contract, state, receipt))
     assert result.returncode == 0, result.stdout
     assert value["output"]["disposition"] == receipt.composition == "ready"
+
+
+@pytest.mark.parametrize("resolved", ["typesafe/jev-1.13", "typesafe/jev-1.13-20260917"])
+def test_replay_preserves_normalized_mcp_fallback_identity(tmp_path, projection, resolved):
+    """Rust replay must retain aliases and versioned labels accepted by Python normalization."""
+    contract, state, receipt = normalized_mcp_packet(resolved)
+    result, value = invoke("replay", projection, *write_inputs(tmp_path, contract, state, receipt))
+    assert result.returncode == 0, result.stdout
+    assert value["output"]["receipt"] == receipt.model_dump(mode="json")
+    assert value["output"]["receipt"]["requested_model"] == "typesafe/jev-1.13"
+    assert value["output"]["receipt"]["resolved_model"] == resolved
+
+
+def normalized_mcp_packet(resolved="typesafe/jev-1.13-20260917"):
+    """Create an actual normalized receipt from advertised fixture routing, without transport."""
+    from jev_cli.providers.mcp import normalize
+
+    contract = DecisionContract(
+        id="test.mcp-replay",
+        version="1",
+        model="jev-1.13.0",
+        questions={"present": {"type": "noul", "instructions": "Is evidence present?"}},
+        composition={
+            "rules": [{"question": "present", "operator": "gte", "value": 0.8, "result": "ready"}],
+            "default": "needs_evidence",
+        },
+    )
+    state = StatePacket(data={"source": "fixture evidence"})
+    normalized = normalize(
+        {
+            "project_id": "fixture",
+            "contract_id": contract.id,
+            "contract_version": contract.version,
+            "answers": {"present": {"type": "noul", "noul": 0.9}},
+            "provider": "openrouter",
+            "requested_model": "typesafe/jev-1.13",
+            "resolved_model": resolved,
+            "fallback_used": True,
+            "elapsed_ms": 1,
+        },
+        contract,
+        "fixture",
+        capabilities={
+            "providers": {
+                "fallback": {"id": "openrouter", "enabled": True, "model": "typesafe/jev-1.13"}
+            }
+        },
+    )
+
+    class NormalizedProvider:
+        name = "mcp"
+
+        def evaluate(self, selected, packet):
+            return normalized
+
+    return contract, state, execute(contract, state, NormalizedProvider())
+
+
+@pytest.mark.parametrize(
+    "fault", ["prefix_collision", "unrelated", "empty_service", "alias", "primary"]
+)
+def test_replay_rejects_ambiguous_mcp_identity_after_alias_support(tmp_path, projection, fault):
+    """Accepting a version suffix must not weaken fallback provenance or primary pinning."""
+    contract, state, receipt = normalized_mcp_packet()
+    if fault == "prefix_collision":
+        receipt.resolved_model = "typesafe/jev-1.130-20260917"
+    elif fault == "unrelated":
+        receipt.resolved_model = "other/model"
+    elif fault == "empty_service":
+        receipt.provider_metadata["service_provider"] = ""
+    elif fault == "alias":
+        receipt.requested_model = "jev-latest"
+        receipt.resolved_model = "jev-latest-20260917"
+    else:
+        receipt.provider_metadata["fallback_used"] = False
+        receipt.requested_model = contract.model
+        receipt.resolved_model = contract.model + "-20260917"
+    result, value = invoke("replay", projection, *write_inputs(tmp_path, contract, state, receipt))
+    assert result.returncode != 0
+    assert value["status"] == "error"

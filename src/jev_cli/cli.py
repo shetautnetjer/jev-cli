@@ -694,6 +694,8 @@ def hook(
 
     if mcp_config and provider_name != "mcp":
         raise typer.BadParameter("--mcp-config requires --provider mcp")
+    if provider_name not in {"typesafe", "mcp", "mock"}:
+        raise typer.BadParameter("provider must be 'typesafe', 'mcp', or 'mock'")
     try:
         mapping = HookConfig.model_validate_json(config.read_text(encoding="utf-8"))
         raw = event_file.read_text(encoding="utf-8") if event_file else sys.stdin.read()

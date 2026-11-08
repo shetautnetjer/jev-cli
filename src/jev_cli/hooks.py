@@ -51,12 +51,14 @@ class _LazyProvider:
     name = "unavailable"
 
     def evaluate(self, contract: DecisionContract, state: StatePacket) -> ProviderResult:
+        """Construct the provider only after reservation and mark the evaluation attempt."""
         self.attempted = True
         self.inner = self.factory()
         self.name = self.inner.name
         return self.inner.evaluate(contract, state)
 
     def close(self) -> None:
+        """Release an initialized provider without invalidating an already retained receipt."""
         close = getattr(self.inner, "close", None)
         if callable(close):
             try:
@@ -91,6 +93,7 @@ def run_hook(
     digest = sha256_json(packet.data)
 
     def read() -> dict[str, Any] | None:
+        """Reuse only a reservation whose contract, evidence hash and reference still match."""
         row = db.execute(
             "SELECT * FROM decisions WHERE run_id=? AND step_id=?", (run_id, step_id)
         ).fetchone()

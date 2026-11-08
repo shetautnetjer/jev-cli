@@ -1,5 +1,23 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Address PR #4 review findings
+
+Following `017c490`, Rust replay now accepts the same versioned fallback labels
+as Python, with the existing primary/provenance rejections preserved. Unsupported
+hook provider names fail before database creation or event admission. Explicit
+file-selection semantics are clarified without changing path filtering.
+The [review follow-up](docs/PR4-REVIEW-FOLLOWUP.md) links the findings and records
+the compatibility limits. Earlier import/qualification manifests remain unchanged.
+
+Final-byte controls fail three times against `017c490`, then all ten pass after
+repair. The complete suite passes 160 core cases (33 optional skips), or 199 with
+optional integrations (zero skips). Rust's 13 tests, build/Clippy, Monty replay,
+Ruff, formatting and mypy pass. Forty-six concise contract/scenario docstrings
+preserve all eight executable ASTs and assertion counts; pinned projection inputs
+are unchanged. Remote docstring coverage remains to be verified after publication.
+New evidence is in `/tmp/jev-pr4-review-fixes-20261107/`; no installed consumer,
+original dirty checkout or live provider was changed by this follow-up.
+
 ## 2026-11-07 — Reconcile published fixes with local CLI capabilities
 
 This isolated candidate starts at published main `b4f41da` and imports the local

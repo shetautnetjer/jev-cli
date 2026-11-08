@@ -1,4 +1,5 @@
 import json
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from jev_cli.providers.mock import MockProvider
 
 
 def setup(tmp_path):
+    """Create a temporary catalog and a mapped event with fixed source/correlation identity."""
     db = connect(tmp_path / "catalog.sqlite")
     import_contract(
         db,
@@ -46,11 +48,13 @@ class CountingProvider(MockProvider):
     calls = 0
 
     def evaluate(self, contract, state):
+        """Count actual evaluations so receipt replay cannot masquerade as a fresh call."""
         self.calls += 1
         return super().evaluate(contract, state)
 
 
 def test_hook_replay_retains_one_decision_and_no_automatic_effect(tmp_path):
+    """Duplicate delivery reuses a decision without inference or an assumed effect outcome."""
     db, config, event = setup(tmp_path)
     p = CountingProvider()
     first = run_hook(db, config, event, lambda: p)
@@ -70,6 +74,7 @@ def test_hook_replay_retains_one_decision_and_no_automatic_effect(tmp_path):
 
 
 def test_unmapped_event_skips_without_opening_provider(tmp_path):
+    """Unconfigured event names neither reserve a decision nor construct a provider."""
     db, config, event = setup(tmp_path)
     event.name = "tool.finished"
     out = run_hook(db, config, event, lambda: pytest.fail("unmapped event called provider"))
@@ -87,6 +92,7 @@ def test_unmapped_event_skips_without_opening_provider(tmp_path):
     ],
 )
 def test_reused_event_id_cannot_change_evidence(tmp_path, field, value):
+    """An event identity cannot silently acquire another mapped name, correlation or state."""
     db, config, event = setup(tmp_path)
     run_hook(db, config, event, CountingProvider)
     changed = event.model_dump()
@@ -99,6 +105,7 @@ def test_reused_event_id_cannot_change_evidence(tmp_path, field, value):
 
 
 def test_pending_and_failed_are_not_automatically_retried(tmp_path):
+    """Concurrent and later delivery observe durable pending/failed state without retrying."""
     db, config, event = setup(tmp_path)
     observed = []
 
@@ -123,6 +130,7 @@ def test_pending_and_failed_are_not_automatically_retried(tmp_path):
 
 
 def test_factory_failure_is_retained(tmp_path):
+    """Valid-provider initialization failure remains a durable, content-free failed decision."""
     db, config, event = setup(tmp_path)
 
     def broken():
@@ -186,6 +194,7 @@ def test_read_only_hook_paths_preserve_pending_caller_transaction(tmp_path, exis
 
 
 def test_cli_reads_stdin_and_replay_needs_no_credentials(tmp_path: Path):
+    """The CLI can replay a retained event with valid MCP selection but no new credentials."""
     db, config, event = setup(tmp_path)
     db.close()
     cfg = tmp_path / "hooks.json"
@@ -202,7 +211,34 @@ def test_cli_reads_stdin_and_replay_needs_no_credentials(tmp_path: Path):
     assert json.loads(out.stdout)["replayed"] is True
 
 
+@pytest.mark.parametrize("existing_catalog", [False, True])
+def test_invalid_provider_does_not_create_catalog_or_consume_event(tmp_path, existing_catalog):
+    """A misspelled provider is usage failure, never a retained failed event."""
+    db, config, event = setup(tmp_path)
+    db.close()
+    catalog = tmp_path / "catalog.sqlite"
+    if not existing_catalog:
+        catalog.unlink()
+    cfg = tmp_path / "hooks.json"
+    cfg.write_text(config.model_dump_json())
+    args = ["hook", str(cfg), "--db", str(catalog), "--provider", "typo"]
+    result = CliRunner().invoke(app, args, input=event.model_dump_json())
+    if existing_catalog:
+        with closing(connect(catalog)) as retained:
+            assert retained.execute("SELECT count(*) FROM decisions").fetchone()[0] == 0
+    else:
+        assert not catalog.exists()
+    assert result.exit_code == 2
+    assert "provider must be" in result.output
+    if existing_catalog:
+        args[-1] = "mock"
+        corrected = CliRunner().invoke(app, args, input=event.model_dump_json())
+        assert corrected.exit_code == 0, corrected.output
+        assert json.loads(corrected.stdout)["status"] == "completed"
+
+
 def test_telemetry_excludes_provider_usage_extensions(tmp_path):
+    """Telemetry retains known counters while dropping arbitrary provider usage extensions."""
     from jev_cli.models import ProviderUsage
 
     db, config, event = setup(tmp_path)
@@ -220,6 +256,7 @@ def test_telemetry_excludes_provider_usage_extensions(tmp_path):
 
 
 def test_cli_database_failure_is_content_free(tmp_path):
+    """Invalid catalog bytes produce a generic CLI failure without echoing event evidence."""
     db, config, event = setup(tmp_path)
     db.close()
     cfg = tmp_path / "hooks.json"

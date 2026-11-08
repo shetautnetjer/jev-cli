@@ -28,6 +28,7 @@ from jev_cli.providers.typesafe import TypeSafeProvider  # noqa: E402
 
 @pytest.fixture
 def pipelex_runtime(monkeypatch, tmp_path):
+    """Boot the real function-only interpreter in the pilot directory and tear it down."""
     monkeypatch.chdir(PILOT)
     boot()
     yield
@@ -45,9 +46,11 @@ def pipelex_runtime(monkeypatch, tmp_path):
 def test_pipelex_runs_32_questions_then_branches(
     pipelex_runtime, probability, default_route, expected
 ):
+    """A single mocked HTTP batch supplies all answers before the real method selects a route."""
     calls = []
 
     def handler(request):
+        """Return a complete typed answer batch while recording every HTTP fixture request."""
         payload = json.loads(request.content)
         calls.append(payload)
         return httpx.Response(
@@ -141,6 +144,7 @@ def test_pipelex_provider_scope_survives_concurrent_worker_threads(pipelex_runti
             self.value = value
 
         def evaluate(self, contract, state):
+            """Detect cross-thread provider leakage by checking each call's bound marker."""
             time.sleep(0.02)
             assert state.data["marker"] == self.value
             return super().evaluate(
@@ -161,6 +165,7 @@ def test_pipelex_provider_scope_survives_concurrent_worker_threads(pipelex_runti
 
 @pytest.mark.parametrize("broken", [False, True, "invalid-json"])
 def test_pilot_cli_has_one_json_result_and_does_not_log_private_inputs(tmp_path, broken):
+    """Success and malformed-input failures keep stdout JSON and omit raw source markers."""
     import subprocess
 
     import yaml

@@ -39,6 +39,7 @@ class CountingMock(MockProvider):
         self.calls = 0
 
     def evaluate(self, contract, state):
+        """Count inference and unwrap hook evidence before applying explicit mock answers."""
         self.calls += 1
         # Hook packets wrap the fixture under evidence. Explicit mock answers
         # avoid treating JSON option order as a semantic decision.
@@ -47,6 +48,7 @@ class CountingMock(MockProvider):
 
 
 def probe():
+    """Exercise snapshot restore, durable hook replay and separate observed outcomes offline."""
     provider = CountingMock()
     with tempfile.TemporaryDirectory(prefix="jev-monty-probe-") as temporary:
         db = connect(Path(temporary) / "catalog.sqlite")
@@ -64,9 +66,11 @@ def probe():
             )
 
             def find_questions(query):
+                """Limit interpreter discovery to the temporary probe catalog scope."""
                 return find_contracts(db, query, scope="probe")
 
             def answer_question(contract_id, version, evidence):
+                """Admit only the fixture contract through the host-owned durable hook."""
                 if (contract_id, version) != (contract.id, contract.version):
                     raise ValueError("Question is not part of this probe")
                 event = HookEvent.model_validate(

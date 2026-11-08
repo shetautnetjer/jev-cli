@@ -21,6 +21,7 @@ from jev_cli.providers.typesafe import TypeSafeProvider
 
 
 def main() -> int:
+    """Run one explicitly selected provider and emit JSON without echoing failure input."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--contract", type=Path, required=True)
     parser.add_argument("--state-file", type=Path, required=True)
@@ -31,6 +32,7 @@ def main() -> int:
     provider = None
 
     async def run() -> DecisionOutput:
+        """Bind the chosen provider only while interpreting the typed decision method."""
         with bind_provider(provider):
             result = await PipelexMTHDSProtocol(library_dirs=[]).execute(
                 mthds_contents=[Path("decision.mthds").read_text()],
