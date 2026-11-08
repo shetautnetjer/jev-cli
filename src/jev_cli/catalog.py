@@ -271,9 +271,11 @@ def run_contract(
     run_id: str,
     step_id: str,
 ) -> DecisionReceipt:
-    """Reserve a step before inference; retain its answer without claiming an effect."""
+    """Reserve before inference; reject pending caller transactions without changing them."""
     if not run_id.strip() or not step_id.strip():
         raise ValueError("Run and step IDs must not be empty")
+    if db.in_transaction:
+        raise ValueError("Contract admission requires a connection without a pending transaction")
     contract = get_contract(db, contract_id, version)
     try:
         with db:

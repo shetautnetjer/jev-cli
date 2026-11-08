@@ -1,0 +1,29 @@
+id: example.source-review
+version: '1'
+model: jev-1.13.0
+questions:
+  supported:
+    type: noul
+    instructions: Does the supplied source explicitly support the supplied claim?
+  kind:
+    type: choice
+    instructions: Which description fits the source statement? Distinguish plans from completed work.
+    criteria:
+      decision: An explicit selected course of action.
+      proposal: A suggested course of action without acceptance.
+      observed_result: An attributable report of a completed action and its result.
+      unknown_no_match: Insufficient evidence or none of the represented categories.
+  clarity:
+    type: score
+    instructions: How clearly can the claim be attributed to the supplied source?
+    criteria:
+      - No attributable support.
+      - Indirect or ambiguous support.
+      - Direct explicit support.
+composition:
+  rules:
+    - question: supported
+      operator: gte
+      value: 0.8
+      result: ready
+  default: needs_evidence

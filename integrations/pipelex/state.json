@@ -1,0 +1,5 @@
+{
+  "source": "The user approved the migration plan. Deployment has not started.",
+  "claim": "The migration plan was approved.",
+  "__mock_answers__": {"supported": 0.95, "kind": "decision", "clarity": 2}
+}

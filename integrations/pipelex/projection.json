@@ -1,0 +1,17 @@
+{
+  "artifact_sha256": "1c1540279c36fee0fa1528ca54a558b1f6488517b0c92cf338c32c827dc9034b",
+  "branches": {
+    "needs_evidence": "jev_needs_evidence",
+    "ready": "jev_return_decision"
+  },
+  "default_handler": "jev_unknown_route",
+  "domain": "jev_workflows",
+  "entrypoint": "evaluate_and_route",
+  "projector_version": "0.1.0",
+  "schema_version": "jev-cli/skill-projection-v1",
+  "source_files": {
+    "SKILL.md": "f66546c587529ee3307feff2d5b66a007bf4cfd69a0f327cf7835f0996459ac3",
+    "decision.mthds": "47e9ba2476648c639b1c0faf2e2477109e7bdf655d3e4f3d0b7af517aed5d193",
+    "jev_method.py": "ca0db22383593fb3592abb289749bb657d877a44f1141d0cd6de78750030b712"
+  }
+}

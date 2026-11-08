@@ -1,5 +1,78 @@
 # Jev CLI continuation
 
+## 2026-11-07 — Bound publication exclusions to the checkout
+
+Final review of `904b14f` found that the publication scanner skipped every file
+when an absolute checkout ancestor was named `target` or `.venv`. Exclusions now
+use paths relative to the repository root, preserving internal build exclusions.
+Four real scanner subprocess cases fail three times on the prior source and all
+pass after the one-line fix; the full offline optional suite passes 203 tests.
+The README and review follow-up clarify that a glob-matched directory becomes
+its own scan root. No Jev package, search behavior or dependency changed.
+Ruff, formatting and the publication scan pass; the exact Swan map was refreshed
+without changing trust. New evidence is in `/tmp/jev-pr4-final-scope-20261107/`;
+the earlier runtime qualification and package artifacts remain historical records.
+
+## 2026-11-07 — Clarify final review documentation
+
+Review of `9c4e078` requested an explicit distinction between ordinary search and
+the `--path-first` basename filter. The README and review follow-up now state it,
+and the follow-up links exact public tests/CI and portable reproduction commands.
+Actual remote docstring coverage is 51.52% across 66 functions, below the advisory
+80% threshold; it is recorded as a remaining warning. This follow-up changes only
+Markdown documentation and preserves all executable source, tests and artifacts.
+
+## 2026-11-07 — Address PR #4 review findings
+
+Following `017c490`, Rust replay now accepts the same versioned fallback labels
+as Python, with the existing primary/provenance rejections preserved. Unsupported
+hook provider names fail before database creation or event admission. Explicit
+file-selection semantics are clarified without changing path filtering.
+The [review follow-up](docs/PR4-REVIEW-FOLLOWUP.md) links the findings and records
+the compatibility limits. Earlier import/qualification manifests remain unchanged.
+
+Final-byte controls fail three times against `017c490`, then all ten pass after
+repair. The complete suite passes 160 core cases (33 optional skips), or 199 with
+optional integrations (zero skips). Rust's 13 tests, build/Clippy, Monty replay,
+Ruff, formatting and mypy pass. Forty-six concise contract/scenario docstrings
+preserve all eight executable ASTs and assertion counts; pinned projection inputs
+are unchanged. Remote docstring coverage remains to be verified after publication.
+New evidence is in `/tmp/jev-pr4-review-fixes-20261107/`; no installed consumer,
+original dirty checkout or live provider was changed by this follow-up.
+
+## 2026-11-07 — Reconcile published fixes with local CLI capabilities
+
+This isolated candidate starts at published main `b4f41da` and imports the local
+hook/path-first APIs plus optional Rust, Pipelex and Monty source from the dirty
+`55dbf51` checkout. All 32 selected original source hashes, original HEAD and Git
+status remain unchanged. No installed launcher or service was changed. The
+[reconciliation record](docs/API-RECONCILIATION.md) explains source provenance,
+compatibility boundaries and the clean-checkout update route; its linked manifest
+distinguishes raw source, initial merge and final repairs.
+
+The direct-module launch guard now follows hook registration. Hook and direct
+catalog admission also reject pending caller transactions before entering their
+own transaction, fixing an independently reproduced caller-work rollback. Replay
+and unmapped hooks remain read-only. Four new ownership cases demonstrate
+preserved writes and durable reservation before provider evaluation. Five final-byte
+API controls fail on published main without the local APIs; the module-entry
+control also fails on the initial import before this repair. The core environment
+passes 157 tests with 26 optional skips; a separate environment exercises all
+189 tests, including Rust/Pipelex, without skips. All 134 published cases remain
+unchanged. Rust's 13 unit tests, offline build/Clippy, Monty fresh-pool replay,
+Ruff, mypy and package builds pass. The complete CLI parameter inventory matches
+the original except the retained published import-file prevalidation; malformed
+path diagnostics occur earlier. Decision models and the path-ranking AST are
+unchanged; separate full-AST comparisons isolate the two admission guards and
+their documentation. The publication scan passes.
+
+Swan's exact candidate map has 47 files and 1,325 symbols with no stale Python
+files and a verified hook/CLI caller. Nested Rust symbols are not covered by that
+map; Cargo and parity tests provide their qualification. Raw evidence and failure
+controls are in `/tmp/jev-api-reconcile-20261107/`. This is offline source and
+packaging qualification, pending review/publication and an explicit installation
+step; no live provider or optional BGE/GLiNER execution was performed.
+
 ## 2026-11-07 — Explain reviewed test boundaries
 
 After `9fc3d78`, review reported 70.15% docstring coverage; all touched production

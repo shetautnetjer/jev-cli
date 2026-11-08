@@ -1,0 +1,2 @@
+# Optional pilot only. The core CLI does not depend on Pipelex.
+pipelex==0.64.0
