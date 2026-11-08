@@ -112,3 +112,26 @@ with the qualified repair and exact workflow equality with upstream. Swan indexe
 the publication worktree separately (35 Python files, 855 symbols, zero stale
 files), without a trust override. Remote publication/review and service adoption
 remain distinct; this branch does not claim any live Jev call or runtime cutover.
+
+## 2026-11-07 — Merge the reviewed dependency security update
+
+Dependabot PR #2 at `980455e2` changes only the locked certifi, filelock and
+setuptools versions and their distribution metadata. Its normal upstream merge
+`abbdb2e` is incorporated by `4f1f275`. The candidate now locks certifi
+2026.10.18, filelock 4.2.1 and setuptools 84.1.0, matching the reviewed GitHub
+advisory fixes. A parsed comparison proves no other package version changed;
+pytest remains 9.0.3 and MCP's development-extra membership is preserved.
+Runtime, tests and the CI workflow remain byte-identical to `e60a6c9`.
+
+A dev-only locked sync changed only installed certifi and left the lock bytes
+unchanged. All 70 offline tests passed again with Python 3.13.15; Ruff lint/format
+and mypy over 22 source files passed. Optional retrieval/extraction dependencies
+filelock and setuptools were not installed or executed, so their updated lock
+entries do not establish model-backed retrieval qualification. No live provider
+calls or default environment changes were made.
+
+Swan clean-rebuilt the exact publication worktree (35 Python files, 855 symbols)
+and resolved the known catalog symbol. The independent pyright limitation above
+remains. The separate follow-up evidence is under
+`/tmp/jev-dependency-review-20261107/`; earlier qualification packets remain
+unchanged. Remote review and merge are handled separately by SUPERAGENT.
