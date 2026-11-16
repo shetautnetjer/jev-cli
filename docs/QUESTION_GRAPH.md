@@ -1,6 +1,6 @@
 # Jev question catalog and situated workflow loop
 
-Status: local catalog slice implemented 2026-09-23; graph runner, GraphQL view, AYA MCP adapter and browser/CUA integration remain design candidates.
+Status: local catalog and optional stdio MCP client implemented in the `codex/catalog-mcp-execution` source branch. Graph runner, GraphQL view and browser/CUA integration remain design candidates.
 
 ## Ownership and integration
 
@@ -72,7 +72,7 @@ CREATE TABLE outcomes (
 
 Do not put keys or raw private UI contents in the catalog. Keep runtime task/turn/trace/observation/effect IDs in AYA's existing event and source tables, with references in outcomes, rather than cloning them. A contract change gets a new fingerprint/version. `observed_result` must distinguish success, failure, unresolved and superseded; the Jev answer is not the outcome.
 
-The CLI now provides `catalog import/list/show/record/outcomes` against its existing DecisionContract and DecisionReceipt types. Import stores the full contract, its fingerprint and each question; changed content must use a new version. Record accepts an external observed status and receipt references. That status is supplied by the caller, not independently verified by the catalog. SQL transitions remain a reserved table with no graph executor. Contract lint and an AYA MCP adapter still need qualification. GraphQL, if needed, is a read/query facade over the same SQL definitions and outcomes; it is not a second store or workflow engine. An initial SQL view or CLI query may be enough.
+The CLI provides `catalog import/list/find/show/run/decisions/observe/record/outcomes` against its existing DecisionContract and DecisionReceipt types. Import stores the full contract, its fingerprint and each question; changed content must use a new version. Run reserves a run/step before inference and retains a decision without claiming an effect occurred. The optional MCP adapter uses the existing service's routing policy and retains primary/fallback metadata. Observe attaches a caller-supplied outcome and evidence reference afterward; it does not independently verify that evidence. Interrupted attempts can remain pending; repeated IDs are refused, with no automatic retries. SQL transitions remain a reserved table with no graph executor. GraphQL, if needed, is a read/query facade over the same SQL definitions and outcomes. See [Integrations](INTEGRATIONS.md) for configuration and the Aya-owned question-authoring boundary.
 
 ## Prior art to evaluate, not blindly install
 

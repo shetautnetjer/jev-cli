@@ -115,6 +115,7 @@ class ProviderResult(BaseModel):
     answers: dict[str, NormalizedAnswer]
     usage: ProviderUsage | None = None
     elapsed_ms: float | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class DecisionReceipt(BaseModel):
@@ -131,6 +132,7 @@ class DecisionReceipt(BaseModel):
     answers: dict[str, NormalizedAnswer]
     usage: ProviderUsage | None = None
     provider_elapsed_ms: float | None = None
+    provider_metadata: dict[str, Any] | None = None
     composition: Any | None = None
 
 

@@ -12,3 +12,4 @@ build/
 .trigger-tree/
 *.log
 .DS_Store
+target/

@@ -5,7 +5,15 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDE_PARTS = {".git", ".venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+EXCLUDE_PARTS = {
+    ".git",
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "target",
+}
 
 SECRET_PATTERNS = {
     "private-key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
@@ -38,6 +46,8 @@ TEXT_SUFFIXES = {
     ".ps1",
     ".ini",
     ".cfg",
+    ".rs",
+    ".mthds",
 }
 
 
